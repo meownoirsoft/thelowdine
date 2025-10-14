@@ -17,6 +17,7 @@ interface Restaurant {
   address: string;
   cuisine: string;
   distance: string;
+  amenity?: string;
   lat?: number;
   lon?: number;
 }
@@ -60,6 +61,8 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showContact, setShowContact] = useState(false);
+  const [excludeFastFood, setExcludeFastFood] = useState(false);
+  const [searchTriggered, setSearchTriggered] = useState(false);
 
   // Debug logging flag and helper
   const DEBUG = true;
@@ -146,6 +149,19 @@ export default function Home() {
     } catch {}
   }, [radiusMeters]);
 
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem('lowdine_exclude_fast_food');
+      if (v !== null) setExcludeFastFood(v === '1');
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('lowdine_exclude_fast_food', excludeFastFood ? '1' : '0');
+    } catch {}
+  }, [excludeFastFood]);
+
   // Pick a random Tony quote per screen
   useEffect(() => {
     if (step === 1 && tonyIntroQuotes.length > 0) {
@@ -175,27 +191,24 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, hasLocation, hasMeal, thinkingCount]);
 
-  // Auto-refresh when radius or meal changes and we have prior params
+  // Manual mode: do not auto-refresh on radius/meal change unless a search has been triggered
   useEffect(() => {
+    if (!searchTriggered) return;
     if (!lastParams || !meal) return;
-    // If we already have a cache, don't hit the API again; show cached
     if (cachedRestaurants.length > 0) {
       setRestaurants(cachedRestaurants);
       return;
     }
-    fetchRestaurants({ ...lastParams, radius: radiusMeters, meal });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [radiusMeters, meal, cachedRestaurants.length]);
+    // Intentionally skip auto-fetch here to keep user in control; they can click again if desired
+  }, [radiusMeters, meal, cachedRestaurants.length, searchTriggered, lastParams, meal]);
 
-  // Debounce location typing: auto-fetch but do NOT advance screens
+  // Debounce location typing: in manual mode we only update lastParams, do not auto-fetch
   useEffect(() => {
     const q = location.trim();
-    if (!q || !meal) return;
-    const t = setTimeout(async () => {
-      const qp = { queryText: q } as const;
-      setLastParams(qp);
-      await fetchRestaurants({ ...qp, radius: radiusMeters, meal });
-    }, 500);
+    if (!q) return;
+    const t = setTimeout(() => {
+      setLastParams({ queryText: q } as const);
+    }, 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location]);
@@ -246,9 +259,10 @@ export default function Home() {
   const spinWheel = () => {
     if (loading) return;
     const base = (cachedRestaurants.length > 0 ? cachedRestaurants : restaurants);
-    if (base.length === 0) return;
+    const filtered = excludeFastFood ? base.filter(r => r.amenity !== 'fast_food') : base;
+    if (filtered.length === 0) return;
     // Per-spin random sample up to 30
-    const pool = base.length > 30 ? randomSample(base, 30) : base;
+    const pool = filtered.length > 30 ? randomSample(filtered, 30) : filtered;
     setWheelRestaurants(pool);
     setIsSpinning(true);
     setShowResult(false);
@@ -444,7 +458,7 @@ export default function Home() {
               <div className="mb-4 flex flex-row items-center justify-center gap-1">
                 <div className="flex flex-col items-center w-[180px] min-w-[180px] flex-shrink-0">
                   <div className="flex justify-center pl-2 sm:pl-3">
-                    <Image src={(loading && hasLocation && hasMeal) ? "/tony-concerned.png" : "/tony-talking.png"} alt={(loading && hasLocation && hasMeal) ? "Tony thinking" : "Tony talking"} width={160} height={160} priority className="rounded-full shadow-lg" />
+                    <Image src={(searchTriggered && loading && hasLocation && hasMeal) ? "/tony-concerned.png" : "/tony-talking.png"} alt={(searchTriggered && loading && hasLocation && hasMeal) ? "Tony thinking" : "Tony talking"} width={160} height={160} priority className="rounded-full shadow-lg" />
                   </div>
                 </div>
                 <div className="w-[224px] sm:w-[256px] min-w-[224px] pr-2 sm:pr-2 -mt-4 -ml-4 mr-4">
@@ -506,12 +520,6 @@ export default function Home() {
                       setWheelRestaurants([]);
                       setSelectedRestaurant(null);
                       setShowResult(false);
-                      const q = location.trim();
-                      if (val && (lastParams || q)) {
-                        const qp = lastParams ?? ({ queryText: q } as const);
-                        setLastParams(qp);
-                        fetchRestaurants({ ...qp, radius: radiusMeters, meal: val }, 'meal-change');
-                      }
                     }}
                     disabled={loading}
                   >
@@ -542,9 +550,6 @@ export default function Home() {
                             setUserEditedLocation(false);
                             justSelectedRef.current = true;
                             setTimeout(() => { justSelectedRef.current = false; }, 400);
-                            if (meal) {
-                              fetchRestaurants({ ...cp, radius: radiusMeters, meal }, 'autocomplete-select');
-                            }
                           }}
                         >
                           {s.label}
@@ -554,31 +559,50 @@ export default function Home() {
                   )}
                 </div>
               </div>
-              <div className="mt-1 text-center">
+              <div className="mt-2 flex items-center justify-center">
+                <label className="flex items-center gap-2 text-amber-200 text-sm" style={{ fontFamily: 'var(--font-quote)' }}>
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-amber-600"
+                    checked={excludeFastFood}
+                    onChange={(e) => setExcludeFastFood(e.target.checked)}
+                  />
+                  Exclude Fast Food
+                </label>
+              </div>
+              <div className="mt-2 text-center">
                 <p className="text-amber-200 text-md sm:text-sm" style={{ fontFamily: 'var(--font-quote)' }}>
                   Just add zip/address and meal you're hankering for, and Tony will let 'er rip!
                 </p>
               </div>
               <div className="mt-3 flex justify-center">
-                {hasLocation && hasMeal && !loading && hasResults && (
+                {hasLocation && hasMeal && !loading && (
                   <button
-                    onClick={() => setStep(2)}
+                    onClick={async () => {
+                      const q = location.trim();
+                      if (!q || !meal) return;
+                      const qp = { queryText: q } as const;
+                      setLastParams(qp);
+                      setSearchTriggered(true);
+                      await fetchRestaurants({ ...qp, radius: radiusMeters, meal });
+                      setStep(2);
+                    }}
                     className={`px-6 py-3 rounded text-lg font-semibold transition-colors bg-amber-600 hover:bg-amber-700`}
                     style={{ fontFamily: 'var(--font-quote)' }}
                   >
-                    Hit me with it Tony!
+                    Let 'Er Rip!
                   </button>
                 )}
               </div>
-              {hasLocation && hasMeal && !loading && !hasResults && (
+              {searchTriggered && hasLocation && hasMeal && !loading && !hasResults && (
                 <p className="mt-2 text-sm text-amber-300 text-center">Tony's gotta think a little harder... and widen the search radius.</p>
               )}
-              {hasLocation && hasMeal && loading && (
+              {searchTriggered && hasLocation && hasMeal && loading && (
                 <p className="mt-4 text-sm text-amber-200 text-center" aria-live="polite" style={{ fontFamily: 'var(--font-quote)' }}>
                   {thinkingIdx === 0 ? 'Tony is thinking...' : tonyThinkingQuotes[thinkingIdx]}
                 </p>
               )}
-              {hasLocation && hasMeal && loading && (
+              {searchTriggered && hasLocation && hasMeal && loading && (
                 <div className="mt-3 w-full flex justify-center">
                   <div className="relative w-64 h-8 overflow-hidden flex items-center justify-center">
                     <img src="/step-progress.gif" alt="Searching..." className="h-8" />

@@ -42,18 +42,19 @@ async function overpassRestaurants(
   lon: number,
   radiusMeters: number,
   amenities: string[],
-  opts?: { includeCuisineRegex?: string; excludeCuisineRegex?: string; excludeNameRegex?: string; diet?: 'vegan' | 'vegetarian' }
+  opts?: { includeCuisineRegex?: string; includeNameRegex?: string; excludeCuisineRegex?: string; excludeNameRegex?: string; diet?: 'vegan' | 'vegetarian' }
 ) {
   const am = amenities.join('|');
   const cuisineInclude = opts?.includeCuisineRegex ? ` ["cuisine"~"(${opts.includeCuisineRegex})", i]` : '';
   const cuisineExclude = opts?.excludeCuisineRegex ? ` ["cuisine"!~"(${opts.excludeCuisineRegex})", i]` : '';
+  const nameInclude = opts?.includeNameRegex ? ` ["name"~"(${opts.includeNameRegex})", i]` : '';
   const nameExclude = opts?.excludeNameRegex ? ` ["name"!~"(${opts.excludeNameRegex})", i]` : '';
   const dietFilter = opts?.diet === 'vegan'
     ? ` ["diet:vegan"="yes"]`
     : opts?.diet === 'vegetarian'
     ? ` ["diet:vegetarian"="yes"]`
     : '';
-  const common = `["amenity"~"^(${am})$"]${cuisineInclude}${cuisineExclude}${nameExclude}${dietFilter}`;
+  const common = `["amenity"~"^(${am})$"]${cuisineInclude}${cuisineExclude}${nameInclude}${nameExclude}${dietFilter}`;
   const query = `
     [out:json][timeout:30];
     (
@@ -101,6 +102,7 @@ async function overpassRestaurants(
       name: tags.name || 'Unnamed Restaurant',
       address: [tags['addr:housenumber'], tags['addr:street'], tags['addr:city']].filter(Boolean).join(' '),
       cuisine: tags.cuisine || 'Various',
+      amenity: tags.amenity,
       lat: center.lat,
       lon: center.lon,
     };
@@ -135,23 +137,27 @@ export async function POST(req: NextRequest) {
     // pizza: restaurant, fast_food with cuisine=pizza
     // vegan/vegetarian: restaurant, cafe with diet tag
     let amenities: string[] = ['restaurant', 'fast_food', 'pub'];
-    let opts: { includeCuisineRegex?: string; excludeCuisineRegex?: string; excludeNameRegex?: string; diet?: 'vegan' | 'vegetarian' } | undefined;
+    let opts: { includeCuisineRegex?: string; includeNameRegex?: string; excludeCuisineRegex?: string; excludeNameRegex?: string; diet?: 'vegan' | 'vegetarian' } | undefined;
     switch (meal) {
       case 'snack':
         amenities = ['cafe', 'bakery', 'ice_cream'];
+        opts = { includeCuisineRegex: 'ice_cream|dessert|bakery|donut|doughnut|pastry|cupcake|cookie' };
         break;
       case 'coffee':
         amenities = ['cafe', 'coffee_shop'];
+        opts = { includeCuisineRegex: 'coffee|cafe|espresso|tea', includeNameRegex: 'coffee|cafe|espresso|tea' };
         break;
       case 'breakfast':
-        amenities = ['restaurant', 'cafe', 'fast_food'];
-        opts = { excludeCuisineRegex: 'pizza', excludeNameRegex: 'Domino' };
+        amenities = ['cafe', 'bakery', 'restaurant'];
+        opts = { includeCuisineRegex: 'breakfast|bagel|bakery|donut|doughnut|diner|pancake|waffle', includeNameRegex: 'breakfast|bagel|donut|doughnut|diner|pancake|waffle', excludeCuisineRegex: 'pizza', excludeNameRegex: 'Domino' };
         break;
       case 'dessert':
         amenities = ['ice_cream', 'cafe', 'bakery'];
+        opts = { includeCuisineRegex: 'dessert|ice_cream|gelato|frozen_yogurt|bakery|pastry' };
         break;
       case 'drinks':
         amenities = ['bar', 'pub', 'biergarten'];
+        opts = { includeCuisineRegex: 'bar|pub|cocktail|wine', includeNameRegex: 'bar|pub|cocktail|wine|brew|brewery|taproom' };
         break;
       case 'pizza':
         amenities = ['restaurant', 'fast_food'];
@@ -159,11 +165,11 @@ export async function POST(req: NextRequest) {
         break;
       case 'vegan':
         amenities = ['restaurant', 'cafe'];
-        opts = { diet: 'vegan' };
+        opts = { diet: 'vegan', includeCuisineRegex: 'vegan', includeNameRegex: 'vegan' };
         break;
       case 'vegetarian':
         amenities = ['restaurant', 'cafe'];
-        opts = { diet: 'vegetarian' };
+        opts = { diet: 'vegetarian', includeCuisineRegex: 'vegetarian|veg', includeNameRegex: 'vegetarian|veggie|veg' };
         break;
       case 'dinner':
       case 'lunch':
@@ -186,6 +192,7 @@ export async function POST(req: NextRequest) {
         name: r.name,
         address: r.address || 'Nearby',
         cuisine: r.cuisine,
+        amenity: r.amenity,
         distance: `${miles.toFixed(1)} miles`,
         lat: r.lat,
         lon: r.lon,

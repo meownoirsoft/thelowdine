@@ -432,8 +432,8 @@ export default function Home() {
         </div>
         {step === 1 && (
           <div className="mb-3 px-1">
-            <p className="text-center text-amber-200 text-base text-xl leading-snug" style={{ fontFamily: 'var(--font-tony)' }}>
-              Don't wanna go nine rounds with your better half on where you want to eat? <br /><small>Relax friend, Tony's got you covered. BOOM.</small>
+            <p className="text-center text-amber-200 text-base text-lg leading-snug" style={{ fontFamily: 'var(--font-tony)' }}>
+              Don't wanna go nine rounds with <br />your better half on where to eat? <br /><small>Relax friend, Tony's got you covered. BOOM.</small>
             </p>
           </div>
         )}
@@ -459,7 +459,7 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center justify-center mb-2">
+              <div className="hidden">
                 <button
                   onClick={useMyLocation}
                   className="flex items-center gap-1 px-2.5 py-1.5 text-sm bg-slate-700 hover:bg-slate-600 rounded-md"

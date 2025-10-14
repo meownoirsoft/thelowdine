@@ -730,6 +730,10 @@ html{
     border-radius: inherit;
   }
 }
+.link{
+  cursor: pointer;
+  text-decoration-line: underline;
+}
 .menu{
   display: flex;
   flex-direction: column;
@@ -972,6 +976,14 @@ html{
   margin-top: 0px;
   margin-bottom: 0px;
   margin-left: -1px;
+}
+.link:focus{
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+.link:focus-visible{
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 .\!loading{
   pointer-events: none !important;
@@ -1509,6 +1521,9 @@ html{
 }
 .table{
   display: table;
+}
+.hidden{
+  display: none;
 }
 .h-10{
   height: 2.5rem;

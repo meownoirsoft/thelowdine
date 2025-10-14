@@ -18,8 +18,8 @@ const tony = Old_Standard_TT({
 });
 
 export const metadata: Metadata = {
-  title: 'The Lowdine - Speakeasy No Drama Dinner Decider',
-  description: 'Let Tony Spinelli decide your feast',
+  title: 'The Lowdine - Dinner Decider',
+  description: 'Let Tony Spinelli decide your feast fate',
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
   themeColor: '#0f172a',
 };
@@ -27,6 +27,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${body.className} ${quote.variable} ${tony.variable}`}>
+      <head>
+        <link rel="preload" as="image" href="/thelowdine-logo.png" />
+        <link rel="preload" as="image" href="/tony-talking.png" />
+        <link rel="preload" as="image" href="/tony-concerned.png" />
+        <link rel="preload" as="image" href="/tony-sideeye.png" />
+        <link rel="preload" as="image" href="/tony-wink.png" />
+        <link rel="preload" as="image" href="/name-ribbon.png" />
+        <link rel="preload" as="image" href="/step-progress.gif" />
+      </head>
       <body className={`speakeasy`}>{children}</body>
     </html>
   );

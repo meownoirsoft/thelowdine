@@ -3,13 +3,6 @@ export default function Share({ share, copied, setCopied }: { share: { url: stri
         <div className="flex items-center justify-center gap-3 text-sm flex-wrap">
             <a
             className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-amber-50"
-            href={`https://twitter.com/intent/tweet?text=${share.shareText}&url=${encodeURIComponent(share.url)}`}
-            target="_blank" rel="noopener noreferrer"
-            >
-            Twitter
-            </a>
-            <a
-            className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-amber-50"
             href={`mailto:?subject=${share.mailSubject}&body=${share.mailBody}`}
             >
             Email

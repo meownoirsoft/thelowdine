@@ -3,7 +3,7 @@ export default function TipTony() {
     return (
     <div className="mt-4 pt-3 border-t border-amber-900/40">
         <p className="text-center text-amber-300 text-sm mb-2" style={{ fontFamily: 'var(--font-quote)' }}>
-            Wanna tip Tony for the pick?
+            Wanna share the love? Tony considers you family. Really.
         </p>
         <div className="flex items-center justify-center gap-3">
             <a

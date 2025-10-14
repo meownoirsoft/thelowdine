@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Bodoni_Moda, Libre_Baskerville, Special_Elite, Old_Standard_TT } from 'next/font/google';
+import { PostHogProvider } from '../components/PostHogProvider';
 
 const display = Bodoni_Moda({ subsets: ['latin'], weight: ['700'] });
 const body = Libre_Baskerville({ subsets: ['latin'], weight: ['400','700'] });
@@ -26,7 +27,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${body.className} ${quote.variable} ${tony.variable}`}>
+    <html lang="en" className={`${body.className} ${quote.variable} ${tony.variable}`}>  
       <head>
         <link rel="preload" as="image" href="/thelowdine-logo.png" />
         <link rel="preload" as="image" href="/tony-talking.png" />
@@ -36,7 +37,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preload" as="image" href="/name-ribbon.png" />
         <link rel="preload" as="image" href="/step-progress.gif" />
       </head>
-      <body className={`speakeasy`}>{children}</body>
+      <body className="speakeasy">
+        <PostHogProvider>
+          {children}
+        </PostHogProvider>
+      </body>
     </html>
   );
 }

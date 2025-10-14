@@ -3,26 +3,39 @@ export default function TipTony() {
     return (
     <div className="mt-4 pt-3 border-t border-amber-900/40">
         <p className="text-center text-amber-300 text-sm mb-2" style={{ fontFamily: 'var(--font-quote)' }}>
-            Wanna share the love?<br />Tony says you's family. Really.
+            "A little birdy might have mentioned the panel below for some reason."
         </p>
         <div className="flex items-center justify-center gap-3">
+            {/**
+             * Ko-fi and Buy Me a Coffee temporarily hidden per request; keep for later re-enable
+             *
+             * <a
+             *   href="https://ko-fi.com/thelowdine"
+             *   target="_blank"
+             *   rel="noopener noreferrer"
+             *   className="w-38 px-3 py-1.5 rounded bg-rose-500 hover:bg-rose-600 text-white text-sm"
+             *   style={{ fontFamily: 'var(--font-quote)' }}
+             * >
+             *   Buy Tony a Ko-fi
+             * </a>
+             * <a
+             *   href="https://www.buymeacoffee.com/thelowdine"
+             *   target="_blank"
+             *   rel="noopener noreferrer"
+             *   className="w-38 px-3 py-1.5 rounded bg-amber-400 hover:bg-amber-500 text-slate-900 text-sm shadow ring-1 ring-amber-500/60"
+             *   style={{ fontFamily: 'var(--font-quote)' }}
+             * >
+             *   Buy Tony a Coffee
+             * </a>
+             */}
             <a
-            href="https://ko-fi.com/thelowdine"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-38 px-3 py-1.5 rounded bg-rose-500 hover:bg-rose-600 text-white text-sm"
-            style={{ fontFamily: 'var(--font-quote)' }}
+              href="/subscribe"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-38 px-3 py-1.5 rounded text-amber-500 text-sm shadow ring-1 ring-amber-500/60"
+              style={{ fontFamily: 'var(--font-quote)' }}
             >
-            Buy Tony a Ko-fi
-            </a>
-            <a
-            href="https://www.buymeacoffee.com/thelowdine"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-38 px-3 py-1.5 rounded bg-amber-400 hover:bg-amber-500 text-slate-900 text-sm shadow ring-1 ring-amber-500/60"
-            style={{ fontFamily: 'var(--font-quote)' }}
-            >
-            Buy Tony a Coffee
+              Push open panel and step inside
             </a>
         </div>
     </div>

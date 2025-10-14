@@ -8,6 +8,7 @@ import Wheel from '@/components/Wheel';
 import TipTony from '@/components/TipTony';
 import Share from '@/components/Share';
 import React from 'react';
+import posthog from 'posthog-js';
 
 // Using a local SVG wheel component to avoid external dependency issues
 
@@ -252,6 +253,7 @@ export default function Home() {
     if (!location.trim()) return;
     const qp = { queryText: location.trim() } as const;
     setLastParams(qp);
+    try { posthog.capture('location_submit', { location: qp.queryText, meal, exclude_fast_food: excludeFastFood }); } catch {}
     await fetchRestaurants({ ...qp, radius: radiusMeters, meal: meal ?? undefined });
     setStep(2);
   };
@@ -263,6 +265,7 @@ export default function Home() {
     if (filtered.length === 0) return;
     // Per-spin random sample up to 30
     const pool = filtered.length > 30 ? randomSample(filtered, 30) : filtered;
+    try { posthog.capture('wheel_spin', { pool_size: pool.length, exclude_fast_food: excludeFastFood }); } catch {}
     setWheelRestaurants(pool);
     setIsSpinning(true);
     setShowResult(false);
@@ -274,6 +277,7 @@ export default function Home() {
     setIsSpinning(false);
     const source = wheelRestaurants.length > 0 ? wheelRestaurants : restaurants;
     const chosen = source[prizeNumber];
+    try { posthog.capture('wheel_result', { id: chosen?.id, name: chosen?.name, cuisine: chosen?.cuisine, distance: chosen?.distance, amenity: chosen?.amenity }); } catch {}
     setSelectedRestaurant(chosen);
     setShowResult(true);
     setStep(3);
@@ -408,6 +412,7 @@ export default function Home() {
       if (requestSeq !== fetchSeqRef.current) return;
       if (usedRadius !== radiusMeters) setRadiusMeters(usedRadius);
       setRestaurants(list);
+      try { posthog.capture('search_results', { count: list.length, used_radius_m: usedRadius, meal: params.meal ?? meal, exclude_fast_food: excludeFastFood }); } catch {}
       dlog('final results', { ctx: context, usedRadius, count: list.length });
       // Merge into cache (cap 100 by unique id)
       setCachedRestaurants(prev => {
@@ -428,6 +433,7 @@ export default function Home() {
       } else {
         setError(e.message || 'Something went wrong');
       }
+      try { posthog.capture('search_error', { message: e?.message || String(e) }); } catch {}
     } finally {
       // Only clear loading if this is the latest request
       if (requestSeq === fetchSeqRef.current) {
@@ -520,6 +526,7 @@ export default function Home() {
                       setWheelRestaurants([]);
                       setSelectedRestaurant(null);
                       setShowResult(false);
+                      try { posthog.capture('meal_selected', { meal: val }); } catch {}
                     }}
                     disabled={loading}
                   >
@@ -550,6 +557,7 @@ export default function Home() {
                             setUserEditedLocation(false);
                             justSelectedRef.current = true;
                             setTimeout(() => { justSelectedRef.current = false; }, 400);
+                            try { posthog.capture('location_autocomplete_selected', { label: s.label, lat: s.lat, lon: s.lon }); } catch {}
                           }}
                         >
                           {s.label}
@@ -565,7 +573,7 @@ export default function Home() {
                     type="checkbox"
                     className="h-4 w-4 accent-amber-600"
                     checked={excludeFastFood}
-                    onChange={(e) => setExcludeFastFood(e.target.checked)}
+                    onChange={(e) => { setExcludeFastFood(e.target.checked); try { posthog.capture('exclude_fast_food_toggled', { value: e.target.checked }); } catch {} }}
                   />
                   Exclude Fast Food
                 </label>
@@ -584,6 +592,7 @@ export default function Home() {
                       const qp = { queryText: q } as const;
                       setLastParams(qp);
                       setSearchTriggered(true);
+                      try { posthog.capture('search_clicked', { location: q, meal, exclude_fast_food: excludeFastFood, radius_m: radiusMeters }); } catch {}
                       await fetchRestaurants({ ...qp, radius: radiusMeters, meal });
                       setStep(2);
                     }}

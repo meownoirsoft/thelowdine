@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Libre_Baskerville, Special_Elite, Old_Standard_TT } from 'next/font/google';
 import { PostHogProvider } from '../components/PostHogProvider';
+import SiteFooter from '../components/SiteFooter';
 
 const body = Libre_Baskerville({ subsets: ['latin'], weight: ['400','700'] });
 const quote = Special_Elite({
@@ -28,17 +29,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${body.className} ${quote.variable} ${tony.variable}`}>  
       <head>
-        <link rel="preload" as="image" href="/thelowdine-logo.png" />
-        <link rel="preload" as="image" href="/tony-talking.png" />
-        <link rel="preload" as="image" href="/tony-concerned.png" />
-        <link rel="preload" as="image" href="/tony-sideeye.png" />
-        <link rel="preload" as="image" href="/tony-wink.png" />
-        <link rel="preload" as="image" href="/name-ribbon.png" />
-        <link rel="preload" as="image" href="/step-progress.gif" />
+        <link rel="preload" as="image" href="/thelowdine-logo.webp" />
+        <link rel="preload" as="image" href="/backroom-logo.webp" />
       </head>
       <body className="speakeasy">
         <PostHogProvider>
           {children}
+          <SiteFooter />
         </PostHogProvider>
       </body>
     </html>

@@ -6,12 +6,12 @@ export default function SubscribePage() {
     <main className="min-h-screen bg-slate-900 text-amber-50 py-6 px-4">
       <div className="container mx-auto max-w-md">
         <div className="py-4 flex justify-center">
-          <Image src="/backroom-logo.png" alt="The Backroom Club" width={260} height={80} priority />
+          <Image src="/backroom-logo.webp" alt="The Backroom Club" width={260} height={80} priority />
         </div>
         <div className="bg-slate-800 rounded-lg p-5 shadow-lg">
           <div className="mb-4 flex items-start gap-3">
             <div className="flex-shrink-0">
-              <Image src="/tony-wink.png" alt="Tony wink" width={80} height={80} className="rounded-full shadow" priority />
+              <Image src="/tony-wink.webp" alt="Tony wink" width={80} height={80} className="rounded-full shadow" priority />
             </div>
             <p className="text-amber-100" style={{ fontFamily: 'var(--font-quote)' }}>
               Well, you found it! The inside scoop on Tony's movements behind the curtain. Very hush hush.

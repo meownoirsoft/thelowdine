@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { tonyIntroQuotes, tonySpinQuotes, tonyResultQuotes, tonyThinkingQuotes } from '@/app/tonyQuotes';
 import { FaMapMarkerAlt, FaUtensils, FaRedo, FaGlassWhiskey, FaLocationArrow } from 'react-icons/fa';
@@ -9,6 +10,7 @@ import TipTony from '@/components/TipTony';
 import Share from '@/components/Share';
 import React from 'react';
 import posthog from 'posthog-js';
+import Privacy from '@/components/Privacy';
 
 // Using a local SVG wheel component to avoid external dependency issues
 
@@ -61,8 +63,10 @@ export default function Home() {
   const [thinkingIdx, setThinkingIdx] = useState(0);
   const [showAbout, setShowAbout] = useState(false);
   const [showContact, setShowContact] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
   const [excludeFastFood, setExcludeFastFood] = useState(false);
   const [searchTriggered, setSearchTriggered] = useState(false);
+  const searchParams = useSearchParams();
 
   // Debug logging flag and helper
   const DEBUG = true;
@@ -175,6 +179,16 @@ export default function Home() {
       setTonyLine(q);
     }
   }, [step]);
+
+  // Open modals via query params (?about=1, ?contact=1, ?privacy=1)
+  useEffect(() => {
+    const a = searchParams.get('about');
+    const c = searchParams.get('contact');
+    const p = searchParams.get('privacy');
+    if (a === '1') setShowAbout(true);
+    if (c === '1') setShowContact(true);
+    if (p === '1') setShowPrivacy(true);
+  }, [searchParams]);
 
   // Rotate thinking quotes while loading
   useEffect(() => {
@@ -447,7 +461,7 @@ export default function Home() {
     <main className="min-h-screen bg-slate-900 text-amber-50 py-2 px-4 pt-0">
       <div className="container mx-auto max-w-md">
         <div className="py-3 flex justify-center">
-          <Image src="/thelowdine-logo.png" alt="The LowDine" width={160} height={40} priority />
+          <Image src="/thelowdine-logo.webp" alt="The LowDine" width={160} height={40} priority sizes="160px" />
         </div>
         {step === 1 && (
           <div className="mb-3 px-1">
@@ -463,7 +477,7 @@ export default function Home() {
               <div className="mb-4 flex flex-row items-center justify-center gap-1">
                 <div className="flex flex-col items-center w-[180px] min-w-[180px] flex-shrink-0">
                   <div className="flex justify-center pl-2 sm:pl-3">
-                    <Image src={(searchTriggered && loading && hasLocation && hasMeal) ? "/tony-concerned.png" : "/tony-talking.png"} alt={(searchTriggered && loading && hasLocation && hasMeal) ? "Tony thinking" : "Tony talking"} width={160} height={160} priority className="rounded-full shadow-lg" />
+                    <Image src={(searchTriggered && loading && hasLocation && hasMeal) ? "/tony-concerned.webp" : "/tony-talking.webp"} alt={(searchTriggered && loading && hasLocation && hasMeal) ? "Tony thinking" : "Tony talking"} width={160} height={160} className="rounded-full shadow-lg" />
                   </div>
                 </div>
                 <div className="w-[224px] sm:w-[256px] min-w-[224px] pr-2 sm:pr-2 -mt-4 -ml-4 mr-4">
@@ -471,7 +485,7 @@ export default function Home() {
                   <div className="mt-2 flex justify-start">
                     <div
                       className="w-full h-12 sm:h-14 flex items-center justify-center text-2xl sm:text-3xl font-bold tracking-normal text-slate-900 leading-tight text-center shadow"
-                      style={{ fontFamily: 'var(--font-tony)', backgroundImage: "url('/name-ribbon.png')", backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
+                      style={{ fontFamily: 'var(--font-tony)', backgroundImage: "url('/name-ribbon.webp')", backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
                     >
                       <span className="-translate-y-[2px] inline-block">Tony Spinelli</span>
                     </div>
@@ -613,7 +627,10 @@ export default function Home() {
               {searchTriggered && hasLocation && hasMeal && loading && (
                 <div className="mt-3 w-full flex justify-center">
                   <div className="relative w-64 h-8 overflow-hidden flex items-center justify-center">
-                    <img src="/step-progress.gif" alt="Searching..." className="h-8" />
+                    <picture>
+                      <source srcSet="/step-progress.webp" type="image/webp" />
+                      <img src="/step-progress.gif" alt="Searching..." className="h-8" />
+                    </picture>
                   </div>
                 </div>
               )}
@@ -628,7 +645,7 @@ export default function Home() {
                   <div className="mb-4 flex flex-row items-center justify-center gap-1">
                     <div className="flex flex-col items-center w-[180px] min-w-[180px] flex-shrink-0">
                       <div className="flex justify-center pl-2 sm:pl-3">
-                        <Image src="/tony-sideeye.png" alt="Tony side-eye" width={160} height={160} priority className="rounded-full shadow-md" />
+                        <Image src="/tony-sideeye.webp" alt="Tony side-eye" width={160} height={160} className="rounded-full shadow-md" />
                       </div>
                       
                     </div>
@@ -637,7 +654,7 @@ export default function Home() {
                       <div className="mt-2 flex justify-start">
                         <div
                           className="w-full h-12 sm:h-14 flex items-center justify-center text-2xl sm:text-3xl font-bold tracking-normal text-slate-900 leading-tight text-center shadow"
-                          style={{ fontFamily: 'var(--font-tony)', backgroundImage: "url('/name-ribbon.png')", backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
+                          style={{ fontFamily: 'var(--font-tony)', backgroundImage: "url('/name-ribbon.webp')", backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
                         >
                           <span className="-translate-y-[2px] inline-block">Tony Spinelli</span>
                         </div>
@@ -660,7 +677,10 @@ export default function Home() {
                           {loading && (
                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-full">
                               <div className="relative w-40 h-10 overflow-hidden flex items-center justify-center">
-                                <img src="/step-progress.gif" alt="Searching..." className="h-8" />
+                                <picture>
+                                  <source srcSet="/step-progress.webp" type="image/webp" />
+                                  <img src="/step-progress.gif" alt="Searching..." className="h-8" />
+                                </picture>
                               </div>
                             </div>
                           )}
@@ -693,7 +713,7 @@ export default function Home() {
               <div className="mb-4 flex flex-row items-center justify-center gap-1">
                 <div className="flex flex-col items-center w-[180px] min-w-[180px] flex-shrink-0">
                   <div className="flex justify-center pl-2 sm:pl-3">
-                    <Image src="/tony-wink.png" alt="Tony wink" width={160} height={160} priority className="rounded-full shadow-md" />
+                    <Image src="/tony-wink.webp" alt="Tony wink" width={160} height={160} className="rounded-full shadow-md" />
                   </div>
                   
                 </div>
@@ -702,7 +722,7 @@ export default function Home() {
                   <div className="mt-2 flex justify-start">
                     <div
                       className="w-full h-12 sm:h-14 flex items-center justify-center text-2xl sm:text-3xl font-bold tracking-normal text-slate-900 leading-tight text-center shadow"
-                      style={{ fontFamily: 'var(--font-tony)', backgroundImage: "url('/name-ribbon.png')", backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
+                      style={{ fontFamily: 'var(--font-tony)', backgroundImage: "url('/name-ribbon.webp')", backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
                     >
                       <span className="-translate-y-[2px] inline-block">Tony Spinelli</span>
                     </div>
@@ -770,7 +790,7 @@ export default function Home() {
                   </div>
                   <div className="px-4 py-4">
                     <p className="mb-2" style={{ fontFamily: 'var(--font-quote)' }}>
-                      The LowDine is your no-drama dinner decider, starring Tony Spinelli. Saving dinner and relationships since a while ago.
+                      The Lowdine is your no-drama dinner decider, starring Tony Spinelli. Saving dinner and relationships since a while ago.
                     </p>
                   </div>
                   <div className="px-4 py-3 border-t border-slate-700 flex justify-end">
@@ -799,6 +819,14 @@ export default function Home() {
                     <button className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 rounded text-sm" style={{ fontFamily: 'var(--font-quote)' }} onClick={() => setShowContact(false)}>Close</button>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+          {showPrivacy && (
+            <div className="fixed inset-0 z-50">
+              <div className="absolute inset-0 bg-black/60" onClick={() => setShowPrivacy(false)}></div>
+              <div className="absolute inset-0 flex items-center justify-center p-4">
+                <Privacy />
               </div>
             </div>
           )}

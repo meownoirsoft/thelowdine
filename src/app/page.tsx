@@ -7,6 +7,7 @@ import { FaMapMarkerAlt, FaUtensils, FaRedo, FaGlassWhiskey, FaLocationArrow } f
 import Wheel from '@/components/Wheel';
 import TipTony from '@/components/TipTony';
 import Share from '@/components/Share';
+import React from 'react';
 
 // Using a local SVG wheel component to avoid external dependency issues
 
@@ -489,9 +490,11 @@ export default function Home() {
                     }}
                     placeholder="Enter your location or zip code"
                     className="w-48 sm:w-64 px-3 py-2 rounded-lg bg-slate-700 text-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    style={{ fontFamily: 'var(--font-quote)' }}
                   />
                   <select
                     className="bg-slate-700 text-amber-50 rounded px-2 py-2"
+                    style={{ fontFamily: 'var(--font-quote)' }}
                     value={meal ?? ''}
                     onChange={(e) => {
                       const v = e.target.value as Meal | '';
@@ -512,7 +515,7 @@ export default function Home() {
                     }}
                     disabled={loading}
                   >
-                    <option value="" disabled>Select meal</option>
+                    <option value="" disabled>Meal?</option>
                     <option value="dinner">Dinner</option>
                     <option value="lunch">Lunch</option>
                     <option value="snack">Snack</option>
@@ -522,7 +525,7 @@ export default function Home() {
                     <option value="drinks">Drinks</option>
                     <option value="pizza">Pizza</option>
                     <option value="vegan">Vegan</option>
-                    <option value="vegetarian">Vegetarian</option>
+                    <option value="vegetarian">Veggie</option>
                   </select>
                   {showSuggestions && suggestions.length > 0 && (
                     <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-[min(20rem,90vw)] max-h-56 overflow-auto bg-slate-800 border border-slate-700 rounded-md shadow-lg z-20">
@@ -586,7 +589,7 @@ export default function Home() {
           )}
 
           {step === 2 && (
-            <>
+            <React.Fragment>
               {/* location/meal/radius moved to step 1; Screen 2 only shows wheel */}
               {restaurants.length > 0 && (
                 <div className="text-center">
@@ -650,7 +653,7 @@ export default function Home() {
                   </div>
                 </div>
               )}
-            </>
+            </React.Fragment>
           )}
 
           {step === 3 && showResult && selectedRestaurant && (
@@ -723,10 +726,10 @@ export default function Home() {
             </div>
           )}
 
-        {/* About Modal */}
-        {showAbout && (
+          {/* About Modal */}
+          {showAbout && (
             <div className="fixed inset-0 z-50">
-              <div className="absolute inset-0 bg-black/60" onClick={() => setShowAbout(false)} />
+              <div className="absolute inset-0 bg-black/60" onClick={() => setShowAbout(false)}></div>
               <div className="absolute inset-0 flex items-center justify-center p-4">
                 <div className="w-full max-w-md bg-slate-800 text-amber-50 rounded-lg shadow-lg ring-1 ring-slate-700">
                   <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
@@ -744,31 +747,31 @@ export default function Home() {
                 </div>
               </div>
             </div>
-        )}
-        {showContact && (
-          <div className="fixed inset-0 z-50">
-            <div className="absolute inset-0 bg-black/60" onClick={() => setShowContact(false)} />
-            <div className="absolute inset-0 flex items-center justify-center p-4">
-              <div className="w-full max-w-md bg-slate-800 text-amber-50 rounded-lg shadow-lg ring-1 ring-slate-700">
-                <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
-                  <h2 className="text-lg text-amber-300" style={{ fontFamily: 'var(--font-quote)' }}>Contact</h2>
-                  <button className="text-amber-300 hover:text-amber-200" onClick={() => setShowContact(false)}>✕</button>
-                </div>
-                <div className="px-4 py-4 space-y-2">
-                  <p style={{ fontFamily: 'var(--font-quote)' }}>Questions, ideas, or a hot tip on a joint?</p>
-                  <div className="flex flex-col gap-2 text-sm">
-                    <a className="underline text-amber-300 hover:text-amber-200" href="mailto:tony@thelowdine.com">tony@thelowdine.com</a>
+          )}
+          {showContact && (
+            <div className="fixed inset-0 z-50">
+              <div className="absolute inset-0 bg-black/60" onClick={() => setShowContact(false)}></div>
+              <div className="absolute inset-0 flex items-center justify-center p-4">
+                <div className="w-full max-w-md bg-slate-800 text-amber-50 rounded-lg shadow-lg ring-1 ring-slate-700">
+                  <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
+                    <h2 className="text-lg text-amber-300" style={{ fontFamily: 'var(--font-quote)' }}>Contact</h2>
+                    <button className="text-amber-300 hover:text-amber-200" onClick={() => setShowContact(false)}>✕</button>
                   </div>
-                </div>
-                <div className="px-4 py-3 border-t border-slate-700 flex justify-end">
-                  <button className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 rounded text-sm" style={{ fontFamily: 'var(--font-quote)' }} onClick={() => setShowContact(false)}>Close</button>
+                  <div className="px-4 py-4 space-y-2">
+                    <p style={{ fontFamily: 'var(--font-quote)' }}>Questions, ideas, or a hot tip on a joint?</p>
+                    <div className="flex flex-col gap-2 text-sm">
+                      <a className="underline text-amber-300 hover:text-amber-200" href="mailto:tony@thelowdine.com">tony@thelowdine.com</a>
+                    </div>
+                  </div>
+                  <div className="px-4 py-3 border-t border-slate-700 flex justify-end">
+                    <button className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 rounded text-sm" style={{ fontFamily: 'var(--font-quote)' }} onClick={() => setShowContact(false)}>Close</button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
-      </div>
+          )}
+        </div>
+       </div>{/* DO NOT REMOVE THIS END DIV */}
     </main>
   );
 }

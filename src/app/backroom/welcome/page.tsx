@@ -6,7 +6,7 @@ export default function BackroomWelcome() {
     <main className="min-h-screen bg-slate-900 text-amber-50 py-3 px-4">
       <div className="container mx-auto max-w-md">
         <div className="py-4 flex justify-center">
-          <Image src="/backroom-logo.webp" alt="The Backroom Club" width={260} height={80} priority />
+          <Image src="/backroom-logo.webp" alt="The Backroom Club" width={260} height={80} priority sizes="(max-width: 768px) 260px, 260px" />
         </div>
         <div className="bg-slate-800 rounded-lg p-5 shadow-lg text-center">
           <p className="text-amber-100 italic mb-6" style={{ fontFamily: 'var(--font-quote)' }}>
@@ -18,7 +18,7 @@ export default function BackroomWelcome() {
           </p>
           <div className="mb-6 flex items-start gap-3 justify-center">
             <div className="flex-shrink-0">
-              <Image src="/tony-wink.webp" alt="Tony wink" width={80} height={80} className="rounded-full shadow" priority />
+              <Image src="/tony-wink.webp" alt="Tony wink" width={80} height={80} className="rounded-full shadow" />
             </div>
             <p className="text-amber-200 text-left" style={{ fontFamily: 'var(--font-quote)' }}>
               "Had a feeling you're the follow-through type. I like that.

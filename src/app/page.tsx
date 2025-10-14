@@ -477,7 +477,14 @@ export default function Home() {
               <div className="mb-4 flex flex-row items-center justify-center gap-1">
                 <div className="flex flex-col items-center w-[180px] min-w-[180px] flex-shrink-0">
                   <div className="flex justify-center pl-2 sm:pl-3">
-                    <Image src={(searchTriggered && loading && hasLocation && hasMeal) ? "/tony-concerned.webp" : "/tony-talking.webp"} alt={(searchTriggered && loading && hasLocation && hasMeal) ? "Tony thinking" : "Tony talking"} width={160} height={160} className="rounded-full shadow-lg" />
+                    <Image
+                      src={(searchTriggered && loading && hasLocation && hasMeal) ? "/tony-concerned.webp" : "/tony-talking.webp"}
+                      alt={(searchTriggered && loading && hasLocation && hasMeal) ? "Tony thinking" : "Tony talking"}
+                      width={160}
+                      height={160}
+                      className="rounded-full shadow-lg"
+                      priority={!(searchTriggered && loading && hasLocation && hasMeal)}
+                    />
                   </div>
                 </div>
                 <div className="w-[224px] sm:w-[256px] min-w-[224px] pr-2 sm:pr-2 -mt-4 -ml-4 mr-4">

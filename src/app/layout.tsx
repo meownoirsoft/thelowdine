@@ -31,6 +31,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preload" as="image" href="/thelowdine-logo.webp" />
         <link rel="preload" as="image" href="/backroom-logo.webp" />
+        <link rel="preconnect" href="https://us.posthog.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="//us.posthog.com" />
+        <link rel="preconnect" href="https://buttondown.email" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="//buttondown.email" />
       </head>
       <body className="speakeasy">
         <PostHogProvider>

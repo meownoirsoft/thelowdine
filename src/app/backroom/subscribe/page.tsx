@@ -6,7 +6,7 @@ export default function SubscribePage() {
     <main className="min-h-screen bg-slate-900 text-amber-50 py-6 px-4">
       <div className="container mx-auto max-w-md">
         <div className="py-4 flex justify-center">
-          <Image src="/backroom-logo.webp" alt="The Backroom Club" width={260} height={80} priority />
+          <Image src="/backroom-logo.webp" alt="The Backroom Club" width={260} height={80} priority sizes="(max-width: 768px) 260px, 260px" />
         </div>
         <div className="bg-slate-800 rounded-lg p-5 shadow-lg">
           <div className="mb-4 flex items-start gap-3">

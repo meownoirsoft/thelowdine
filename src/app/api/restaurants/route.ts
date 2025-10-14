@@ -42,9 +42,10 @@ async function overpassRestaurants(
   lon: number,
   radiusMeters: number,
   amenities: string[],
-  opts?: { excludeCuisineRegex?: string; excludeNameRegex?: string; diet?: 'vegan' | 'vegetarian' }
+  opts?: { includeCuisineRegex?: string; excludeCuisineRegex?: string; excludeNameRegex?: string; diet?: 'vegan' | 'vegetarian' }
 ) {
   const am = amenities.join('|');
+  const cuisineInclude = opts?.includeCuisineRegex ? ` ["cuisine"~"(${opts.includeCuisineRegex})", i]` : '';
   const cuisineExclude = opts?.excludeCuisineRegex ? ` ["cuisine"!~"(${opts.excludeCuisineRegex})", i]` : '';
   const nameExclude = opts?.excludeNameRegex ? ` ["name"!~"(${opts.excludeNameRegex})", i]` : '';
   const dietFilter = opts?.diet === 'vegan'
@@ -52,7 +53,7 @@ async function overpassRestaurants(
     : opts?.diet === 'vegetarian'
     ? ` ["diet:vegetarian"="yes"]`
     : '';
-  const common = `["amenity"~"^(${am})$"]${cuisineExclude}${nameExclude}${dietFilter}`;
+  const common = `["amenity"~"^(${am})$"]${cuisineInclude}${cuisineExclude}${nameExclude}${dietFilter}`;
   const query = `
     [out:json][timeout:30];
     (
@@ -134,7 +135,7 @@ export async function POST(req: NextRequest) {
     // pizza: restaurant, fast_food with cuisine=pizza
     // vegan/vegetarian: restaurant, cafe with diet tag
     let amenities: string[] = ['restaurant', 'fast_food', 'pub'];
-    let opts: { excludeCuisineRegex?: string; excludeNameRegex?: string; diet?: 'vegan' | 'vegetarian' } | undefined;
+    let opts: { includeCuisineRegex?: string; excludeCuisineRegex?: string; excludeNameRegex?: string; diet?: 'vegan' | 'vegetarian' } | undefined;
     switch (meal) {
       case 'snack':
         amenities = ['cafe', 'bakery', 'ice_cream'];
@@ -154,7 +155,7 @@ export async function POST(req: NextRequest) {
         break;
       case 'pizza':
         amenities = ['restaurant', 'fast_food'];
-        opts = { cuisineRegex: 'pizza' };
+        opts = { includeCuisineRegex: 'pizza' };
         break;
       case 'vegan':
         amenities = ['restaurant', 'cafe'];

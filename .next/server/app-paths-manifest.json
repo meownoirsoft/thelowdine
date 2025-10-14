@@ -1,6 +1,8 @@
 {
+  "/not-found": "app/not-found.js",
   "/page": "app/page.js",
   "/backroom/subscribe/page": "app/backroom/subscribe/page.js",
   "/backroom/success/page": "app/backroom/success/page.js",
-  "/backroom/welcome/page": "app/backroom/welcome/page.js"
+  "/backroom/welcome/page": "app/backroom/welcome/page.js",
+  "/api/restaurants/route": "app/api/restaurants/route.js"
 }

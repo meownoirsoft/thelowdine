@@ -59,7 +59,6 @@ export default function Home() {
   const [userEditedLocation, setUserEditedLocation] = useState(false);
   const [thinkingCount, setThinkingCount] = useState(0);
   const [thinkingIdx, setThinkingIdx] = useState(0);
-  const [copied, setCopied] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [excludeFastFood, setExcludeFastFood] = useState(false);
@@ -751,7 +750,7 @@ export default function Home() {
                   if anyone asks, you didn't hear it from me.
                 </p>
                 {share && (
-                  <Share share={share} copied={copied} setCopied={setCopied} />
+                  <Share share={share} />
                 )}
                 {/* Tip Tony */}
                 <TipTony />

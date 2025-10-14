@@ -1,9 +1,8 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Bodoni_Moda, Libre_Baskerville, Special_Elite, Old_Standard_TT } from 'next/font/google';
+import { Libre_Baskerville, Special_Elite, Old_Standard_TT } from 'next/font/google';
 import { PostHogProvider } from '../components/PostHogProvider';
 
-const display = Bodoni_Moda({ subsets: ['latin'], weight: ['700'] });
 const body = Libre_Baskerville({ subsets: ['latin'], weight: ['400','700'] });
 const quote = Special_Elite({
   subsets: ['latin'],

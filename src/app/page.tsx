@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { tonyIntroQuotes, tonySpinQuotes, tonyResultQuotes, tonyThinkingQuotes } from '@/app/tonyQuotes';
 import { FaMapMarkerAlt, FaUtensils, FaRedo, FaGlassWhiskey, FaLocationArrow } from 'react-icons/fa';
 import Wheel from '@/components/Wheel';
+import TipTony from '@/components/TipTony';
+import Share from '@/components/Share';
 
 // Using a local SVG wheel component to avoid external dependency issues
 
@@ -55,6 +57,8 @@ export default function Home() {
   const [thinkingCount, setThinkingCount] = useState(0);
   const [thinkingIdx, setThinkingIdx] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
+  const [showContact, setShowContact] = useState(false);
 
   // Debug logging flag and helper
   const DEBUG = true;
@@ -312,7 +316,8 @@ export default function Home() {
   async function fetchRestaurants(
     params: { queryText?: string; coords?: { lat: number; lon: number }; radius?: number; meal?: 'dinner' | 'lunch' | 'snack' | 'coffee' | 'breakfast' | 'dessert' | 'drinks' | 'pizza' | 'vegan' | 'vegetarian' },
     context: string = 'unknown'
-  ) {
+  ) 
+  {
     let requestSeq = 0;
     try {
       if (!params.meal) return; // require meal selection before fetching
@@ -414,7 +419,6 @@ export default function Home() {
         setLoading(false);
         setThinkingIdx(0);
         setThinkingCount(0);
-        if (DEBUG) console.timeEnd(`fetchRestaurants [${context}] seq#${requestSeq}`);
       }
     }
   }
@@ -547,6 +551,11 @@ export default function Home() {
                   )}
                 </div>
               </div>
+              <div className="mt-1 text-center">
+                <p className="text-amber-200 text-md sm:text-sm" style={{ fontFamily: 'var(--font-quote)' }}>
+                  Just add zip/address and meal you're hankering for, and Tony will let 'er rip!
+                </p>
+              </div>
               <div className="mt-3 flex justify-center">
                 {hasLocation && hasMeal && !loading && hasResults && (
                   <button
@@ -562,7 +571,7 @@ export default function Home() {
                 <p className="mt-2 text-sm text-amber-300 text-center">Tony's gotta think a little harder... and widen the search radius.</p>
               )}
               {hasLocation && hasMeal && loading && (
-                <p className="mt-4 text-sm text-amber-200 text-center" aria-live="polite">
+                <p className="mt-4 text-sm text-amber-200 text-center" aria-live="polite" style={{ fontFamily: 'var(--font-quote)' }}>
                   {thinkingIdx === 0 ? 'Tony is thinking...' : tonyThinkingQuotes[thinkingIdx]}
                 </p>
               )}
@@ -703,76 +712,62 @@ export default function Home() {
               </div>
               <div className="mt-4 px-3 py-3 border-t border-amber-900/40">
                 <p className="text-center text-amber-300 text-sm mb-2" style={{ fontFamily: 'var(--font-quote)' }}>
-                  if anyone asks, you didn’t hear it from me.
+                  if anyone asks, you didn't hear it from me.
                 </p>
-              {share && (
-                <div className="flex items-center justify-center gap-3 text-sm flex-wrap">
-                  <a
-                    className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-amber-50"
-                    href={`https://twitter.com/intent/tweet?text=${share.shareText}&url=${encodeURIComponent(share.url)}`}
-                    target="_blank" rel="noopener noreferrer"
-                  >
-                    Twitter
-                  </a>
-                  <a
-                    className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-amber-50"
-                    href={`mailto:?subject=${share.mailSubject}&body=${share.mailBody}`}
-                  >
-                    Email
-                  </a>
-                  <a
-                    className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-amber-50"
-                    href={`sms:?&body=${share.smsBody}`}
-                  >
-                    SMS
-                  </a>
-                  <button
-                    className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-amber-50"
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(share.url);
-                        setCopied(true);
-                      } catch {}
-                    }}
-                  >
-                    {copied ? 'Copied!' : 'Link'}
-                  </button>
-                </div>
-              )}
-              {/* Tip Tony */}
-              <div className="mt-4 pt-3 border-t border-amber-900/40">
-                <p className="text-center text-amber-300 text-sm mb-2" style={{ fontFamily: 'var(--font-quote)' }}>
-                  Wanna tip Tony for the pick?
-                </p>
-                <div className="flex items-center justify-center gap-3">
-                  <a
-                    href="https://ko-fi.com/thelowdine"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-1.5 rounded bg-rose-500 hover:bg-rose-600 text-white text-sm"
-                    style={{ fontFamily: 'var(--font-quote)' }}
-                  >
-                    Buy Tony a Ko-fi
-                  </a>
-                  <a
-                    href="https://www.buymeacoffee.com/thelowdine"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-1.5 rounded bg-amber-400 hover:bg-amber-500 text-slate-900 text-sm shadow ring-1 ring-amber-500/60"
-                    style={{ fontFamily: 'var(--font-quote)' }}
-                  >
-                    Buy Tony a Coffee
-                  </a>
-                </div>
-              </div>
+                {share && (
+                  <Share share={share} copied={copied} setCopied={setCopied} />
+                )}
+                {/* Tip Tony */}
+                <TipTony />
               </div>
             </div>
           )}
-        </div>
 
-        <footer className="text-center text-sm text-amber-900 mt-8">
-          <p> {new Date().getFullYear()} The LowDine - The No Drama Dinner Decider</p>
-        </footer>
+        {/* About Modal */}
+        {showAbout && (
+            <div className="fixed inset-0 z-50">
+              <div className="absolute inset-0 bg-black/60" onClick={() => setShowAbout(false)} />
+              <div className="absolute inset-0 flex items-center justify-center p-4">
+                <div className="w-full max-w-md bg-slate-800 text-amber-50 rounded-lg shadow-lg ring-1 ring-slate-700">
+                  <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
+                    <h2 className="text-lg text-amber-300" style={{ fontFamily: 'var(--font-quote)' }}>About The LowDine</h2>
+                    <button className="text-amber-300 hover:text-amber-200" onClick={() => setShowAbout(false)}>✕</button>
+                  </div>
+                  <div className="px-4 py-4">
+                    <p className="mb-2" style={{ fontFamily: 'var(--font-quote)' }}>
+                      The LowDine is your no-drama dinner decider, starring Tony Spinelli. Saving dinner and relationships since a while ago.
+                    </p>
+                  </div>
+                  <div className="px-4 py-3 border-t border-slate-700 flex justify-end">
+                    <button className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 rounded text-sm" style={{ fontFamily: 'var(--font-quote)' }} onClick={() => setShowAbout(false)}>Close</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+        )}
+        {showContact && (
+          <div className="fixed inset-0 z-50">
+            <div className="absolute inset-0 bg-black/60" onClick={() => setShowContact(false)} />
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+              <div className="w-full max-w-md bg-slate-800 text-amber-50 rounded-lg shadow-lg ring-1 ring-slate-700">
+                <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between">
+                  <h2 className="text-lg text-amber-300" style={{ fontFamily: 'var(--font-quote)' }}>Contact</h2>
+                  <button className="text-amber-300 hover:text-amber-200" onClick={() => setShowContact(false)}>✕</button>
+                </div>
+                <div className="px-4 py-4 space-y-2">
+                  <p style={{ fontFamily: 'var(--font-quote)' }}>Questions, ideas, or a hot tip on a joint?</p>
+                  <div className="flex flex-col gap-2 text-sm">
+                    <a className="underline text-amber-300 hover:text-amber-200" href="mailto:tony@thelowdine.com">tony@thelowdine.com</a>
+                  </div>
+                </div>
+                <div className="px-4 py-3 border-t border-slate-700 flex justify-end">
+                  <button className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 rounded text-sm" style={{ fontFamily: 'var(--font-quote)' }} onClick={() => setShowContact(false)}>Close</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
       </div>
     </main>
   );

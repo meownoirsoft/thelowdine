@@ -48,6 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             background-color: #0f172a;
           }
         `}} />
+        
         <link rel="preload" as="image" href="/thelowdine-logo.webp" />
         <link rel="preload" as="image" href="/backroom-logo.webp" />
         <link rel="preconnect" href="https://us.posthog.com" crossOrigin="anonymous" />

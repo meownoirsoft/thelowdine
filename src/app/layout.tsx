@@ -1,21 +1,48 @@
 import './globals.css';
+import './fonts.css';
 import type { Metadata } from 'next';
-import { Libre_Baskerville, Special_Elite, Old_Standard_TT } from 'next/font/google';
-import { PostHogProvider } from '../components/PostHogProvider';
+import localFont from 'next/font/local';
+
 import SiteFooter from '../components/SiteFooter';
 
-const body = Libre_Baskerville({ subsets: ['latin'], weight: ['400','700'] });
-const quote = Special_Elite({
-  subsets: ['latin'],
-  weight: ['400'],
-  display: 'swap',
-  variable: '--font-quote',
+const body = localFont({
+  src: [
+    {
+      path: '../../public/fonts/Libre_Baskerville/LibreBaskerville-Regular.ttf',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../../public/fonts/Libre_Baskerville/LibreBaskerville-Bold.ttf',
+      weight: '700',
+      style: 'normal',
+    }
+  ],
+  variable: '--font-body',
+  fallback: ['Georgia', 'serif']
 });
-const tony = Old_Standard_TT({
-  subsets: ['latin'],
-  weight: ['400','700'],
-  display: 'swap',
+
+const quote = localFont({
+  src: '../../public/fonts/Special_Elite/SpecialElite-Regular.ttf',
+  variable: '--font-quote',
+  fallback: ['Courier New', 'monospace']
+});
+
+const tony = localFont({
+  src: [
+    {
+      path: '../../public/fonts/Old_Standard_TT/OldStandardTT-Regular.ttf',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../../public/fonts/Old_Standard_TT/OldStandardTT-Bold.ttf',
+      weight: '700',
+      style: 'normal',
+    }
+  ],
   variable: '--font-tony',
+  fallback: ['Georgia', 'serif']
 });
 
 export const metadata: Metadata = {
@@ -51,8 +78,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         
         <link rel="preload" as="image" href="/thelowdine-logo.webp" />
         <link rel="preload" as="image" href="/backroom-logo.webp" />
-        <link rel="preconnect" href="https://us.posthog.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="//us.posthog.com" />
+
         <link rel="preconnect" href="https://buttondown.email" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="//buttondown.email" />
       </head>
@@ -62,10 +88,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             body { display: block !important; }
           `}} />
         </noscript>
-        <PostHogProvider>
           {children}
           <SiteFooter />
-        </PostHogProvider>
       </body>
     </html>
   );

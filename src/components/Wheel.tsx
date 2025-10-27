@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bodoni_Moda } from 'next/font/google';
-const bodoni = Bodoni_Moda({ subsets: ['latin'], weight: ['700'] });
+import localFont from 'next/font/local';
+const bodoni = localFont({
+  src: '../../public/fonts/Bodoni_Moda/static/BodoniModa_28pt-Bold.ttf',
+  fallback: ['Georgia', 'serif']
+});
 
 type WheelDatum = {
   option: string;

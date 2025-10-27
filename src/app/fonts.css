@@ -1,0 +1,51 @@
+/* Libre Baskerville */
+@font-face {
+  font-family: 'Libre Baskerville';
+  src: url('/fonts/Libre_Baskerville/LibreBaskerville-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Libre Baskerville';
+  src: url('/fonts/Libre_Baskerville/LibreBaskerville-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Special Elite */
+@font-face {
+  font-family: 'Special Elite';
+  src: url('/fonts/Special_Elite/SpecialElite-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Old Standard TT */
+@font-face {
+  font-family: 'Old Standard TT';
+  src: url('/fonts/Old_Standard_TT/OldStandardTT-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Old Standard TT';
+  src: url('/fonts/Old_Standard_TT/OldStandardTT-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Bodoni Moda */
+@font-face {
+  font-family: 'Bodoni Moda';
+  src: url('/fonts/Bodoni_Moda/static/BodoniModa/BodoniModa-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

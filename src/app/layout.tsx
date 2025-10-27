@@ -2,6 +2,7 @@ import './globals.css';
 import './fonts.css';
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
+import Script from 'next/script';
 
 import SiteFooter from '../components/SiteFooter';
 
@@ -56,6 +57,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${body.className} ${quote.className} ${tony.className} ${quote.variable} ${tony.variable} bg-slate-900`}>
       <head>
+        <Script
+          defer
+          data-domain="thelowdine.com"
+          src="https://plausible.io/js/script.js"
+        />
         <style dangerouslySetInnerHTML={{__html: `
           :root {
             --font-quote: ${quote.style.fontFamily};

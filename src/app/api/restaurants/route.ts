@@ -1,6 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
+// Simple in-memory cache to smooth over transient Overpass flakiness
+const OVERPASS_CACHE = new Map<string, { ts: number; data: any }>();
+const CACHE_TTL_MS = 1000 * 60 * 5; // 5 minutes
+const CACHE_MAX = 300;
+
+function cacheKey(lat: number, lon: number, radiusMeters: number, amenities: string[], opts?: any) {
+  return `ov:${lat.toFixed(6)}:${lon.toFixed(6)}:${radiusMeters}:${amenities.join('|')}:${JSON.stringify(opts || {})}`;
+}
+
+function pruneCacheIfNeeded() {
+  if (OVERPASS_CACHE.size <= CACHE_MAX) return;
+  // remove oldest
+  let oldestKey: string | null = null;
+  let oldestTs = Infinity;
+  for (const k of Array.from(OVERPASS_CACHE.keys())) {
+    const v = OVERPASS_CACHE.get(k)!;
+    if (v.ts < oldestTs) {
+      oldestTs = v.ts;
+      oldestKey = k;
+    }
+  }
+  if (oldestKey) OVERPASS_CACHE.delete(oldestKey);
+}
+
+function shuffle<T>(arr: T[]) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function sleep(ms: number) {
+  return new Promise((res) => setTimeout(res, ms));
+}
+
 function toRad(v: number) {
   return (v * Math.PI) / 180;
 }
@@ -65,33 +101,65 @@ async function overpassRestaurants(
     out center tags 80;
   `;
   console.log('[API] Overpass Query:', query);
-  const endpoints = [
+  const endpoints = shuffle([
     'https://overpass-api.de/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter',
     'https://overpass.openstreetmap.ru/api/interpreter'
-  ];
+  ]);
+
+  // Check cache first
+  const key = cacheKey(lat, lon, radiusMeters, amenities, opts);
+  const cached = OVERPASS_CACHE.get(key);
+  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
+    console.log('[API] overpassRestaurants: cache hit', { key, count: Array.isArray(cached.data) ? cached.data.length : 0 });
+    return cached.data;
+  }
+
   let data: any = null;
   for (const ep of endpoints) {
-    try {
-      const controller = new AbortController();
-      const to = setTimeout(() => controller.abort(), 12000);
-      const res = await fetch(ep, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'Lowdine/1.0 (contact: example@example.com)'
-        },
-        body: new URLSearchParams({ data: query }).toString(),
-        cache: 'no-store',
-        signal: controller.signal,
-        next: { revalidate: 0 },
-      }).finally(() => clearTimeout(to));
-      if (!res.ok) continue;
-      data = await res.json();
-      break;
-    } catch (e) {
-      // try next mirror
+    // try each endpoint with a couple attempts and exponential backoff
+    const attempts = 2;
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      const attemptStart = Date.now();
+      try {
+        const controller = new AbortController();
+        const to = setTimeout(() => controller.abort(), 20000);
+        const res = await fetch(ep, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'Lowdine/1.0 (contact: example@example.com)'
+          },
+          body: new URLSearchParams({ data: query }).toString(),
+          cache: 'no-store',
+          signal: controller.signal,
+          next: { revalidate: 0 },
+        }).finally(() => clearTimeout(to));
+
+        const elapsed = Date.now() - attemptStart;
+        if (!res.ok) {
+          console.log('[API] overpass endpoint non-ok', { endpoint: ep, status: res.status, attempt, elapsed });
+          // small backoff before retrying this endpoint
+          if (attempt < attempts - 1) await sleep(200 * Math.pow(2, attempt));
+          continue;
+        }
+
+        const parsed = await res.json();
+        if (parsed && Array.isArray(parsed.elements) && parsed.elements.length > 0) {
+          console.log('[API] overpass endpoint success', { endpoint: ep, count: parsed.elements.length, attempt, elapsed });
+          data = parsed;
+          break;
+        }
+
+        console.log('[API] overpass endpoint ok but empty', { endpoint: ep, attempt, elapsed });
+        if (attempt < attempts - 1) await sleep(200 * Math.pow(2, attempt));
+      } catch (e) {
+        const msg = (e as any)?.message || String(e);
+        console.log('[API] overpass endpoint error', { endpoint: ep, attempt, error: msg });
+        if (attempt < attempts - 1) await sleep(200 * Math.pow(2, attempt));
+      }
     }
+    if (data) break;
   }
   if (!data) {
     console.log('[API] overpassRestaurants: no data returned');

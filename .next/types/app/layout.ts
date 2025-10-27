@@ -1,4 +1,4 @@
-// File: /media/sym/LUCENT-2T/code/CascadeProjects/windsurf-project/lowdine/src/app/layout.tsx
+// File: /media/sym/LUCENT-2T/code/lowdine/src/app/layout.tsx
 import * as entry from '../../../src/app/layout.js'
 import type { ResolvingMetadata } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

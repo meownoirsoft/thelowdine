@@ -27,8 +27,27 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${body.className} ${quote.variable} ${tony.variable}`}>  
+    <html lang="en" className={`${body.className} ${quote.className} ${tony.className} ${quote.variable} ${tony.variable} bg-slate-900`}>
       <head>
+        <style dangerouslySetInnerHTML={{__html: `
+          :root {
+            --font-quote: ${quote.style.fontFamily};
+            --font-tony: ${tony.style.fontFamily};
+          }
+          html, body {
+            margin: 0;
+            padding: 0;
+            background-color: #0f172a !important;
+            color: #fef9c3 !important;
+            min-height: 100vh;
+          }
+          * {
+            box-sizing: border-box;
+          }
+          body > * {
+            background-color: #0f172a;
+          }
+        `}} />
         <link rel="preload" as="image" href="/thelowdine-logo.webp" />
         <link rel="preload" as="image" href="/backroom-logo.webp" />
         <link rel="preconnect" href="https://us.posthog.com" crossOrigin="anonymous" />
@@ -36,7 +55,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://buttondown.email" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="//buttondown.email" />
       </head>
-      <body className="speakeasy">
+      <body className="speakeasy min-h-screen bg-slate-900">
+        <noscript>
+          <style dangerouslySetInnerHTML={{__html: `
+            body { display: block !important; }
+          `}} />
+        </noscript>
         <PostHogProvider>
           {children}
           <SiteFooter />

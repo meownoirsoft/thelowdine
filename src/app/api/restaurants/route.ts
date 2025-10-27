@@ -64,6 +64,7 @@ async function overpassRestaurants(
     );
     out center tags 80;
   `;
+  console.log('[API] Overpass Query:', query);
   const endpoints = [
     'https://overpass-api.de/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter',
@@ -92,12 +93,19 @@ async function overpassRestaurants(
       // try next mirror
     }
   }
-  if (!data) return [];
-  if (!data || !Array.isArray(data.elements)) return [];
+  if (!data) {
+    console.log('[API] overpassRestaurants: no data returned');
+    return [];
+  }
+  if (!data || !Array.isArray(data.elements)) {
+    console.log('[API] overpassRestaurants: no elements array', { dataType: typeof data, keys: data ? Object.keys(data) : [] });
+    return [];
+  }
+  console.log('[API] overpassRestaurants: got', data.elements.length, 'elements');
   const out = data.elements.map((el: any) => {
     const center = el.type === 'node' ? { lat: el.lat, lon: el.lon } : (el.center || {});
     const tags = el.tags || {};
-    return {
+    const result = {
       id: el.id,
       name: tags.name || 'Unnamed Restaurant',
       address: [tags['addr:housenumber'], tags['addr:street'], tags['addr:city']].filter(Boolean).join(' '),
@@ -106,7 +114,12 @@ async function overpassRestaurants(
       lat: center.lat,
       lon: center.lon,
     };
+    if (!result.lat || !result.lon) {
+      console.log('[API] Element missing coordinates:', el.type, el.id, tags.name || tags.amenity);
+    }
+    return result;
   }).filter((r: any) => r.lat && r.lon);
+  console.log('[API] overpassRestaurants: filtered to', out.length, 'results with valid coordinates');
   return out;
 }
 
@@ -144,8 +157,9 @@ export async function POST(req: NextRequest) {
         opts = { includeCuisineRegex: 'ice_cream|dessert|bakery|donut|doughnut|pastry|cupcake|cookie' };
         break;
       case 'coffee':
-        amenities = ['cafe', 'coffee_shop'];
-        opts = { includeCuisineRegex: 'coffee|cafe|espresso|tea', includeNameRegex: 'coffee|cafe|espresso|tea' };
+        // Start with broader search - just get any cafe
+        amenities = ['cafe'];
+        opts = {};
         break;
       case 'breakfast':
         amenities = ['cafe', 'bakery', 'restaurant'];
@@ -174,17 +188,38 @@ export async function POST(req: NextRequest) {
       case 'dinner':
       case 'lunch':
       default:
-        amenities = ['restaurant', 'fast_food', 'pub'];
+        // Include more amenity types for broader results
+        amenities = ['restaurant', 'fast_food', 'pub', 'cafe', 'food_court', 'bistro'];
         break;
     }
 
-    const listings = await overpassRestaurants(origin.lat, origin.lon, radiusMeters, amenities, opts);
+    console.log('[API] Starting search', { meal, amenities, opts, radiusMeters, lat: origin.lat, lon: origin.lon });
+    let listings = await overpassRestaurants(origin.lat, origin.lon, radiusMeters, amenities, opts);
+    console.log('[API] Initial search returned', listings.length, 'results');
+    
+    // If still no results for coffee, try adding fast_food (McDonald's, etc often have good coffee)
+    if (listings.length === 0 && meal === 'coffee') {
+      console.log('[API] Coffee: trying with fast_food added');
+      listings = await overpassRestaurants(origin.lat, origin.lon, radiusMeters, ['cafe', 'fast_food'], {});
+      console.log('[API] Coffee with fast_food returned', listings.length, 'results');
+    }
+    
+    console.log('[API] Before filtering:', listings.length, 'places');
+    
     const filtered = listings.filter((r: any) => {
       const nm = (r.name || '').trim();
-      if (!nm) return false;
-      if (/^unnamed/i.test(nm)) return false;
+      if (!nm) {
+        console.log('[API] Filtering out unnamed place:', r.amenity, r.cuisine);
+        return false;
+      }
+      if (/^unnamed/i.test(nm)) {
+        console.log('[API] Filtering out "Unnamed" place');
+        return false;
+      }
       return true;
     });
+    
+    console.log('[API] After filtering:', filtered.length, 'places with names');
     const withDistance = filtered.map((r: any) => {
       const miles = haversineMiles(origin!.lat, origin!.lon, r.lat, r.lon);
       return {

@@ -1,4 +1,4 @@
-// File: /media/sym/LUCENT-2T/code/CascadeProjects/windsurf-project/lowdine/src/app/api/restaurants/route.ts
+// File: /media/sym/LUCENT-2T/code/lowdine/src/app/api/restaurants/route.ts
 import * as entry from '../../../../../src/app/api/restaurants/route.js'
 import type { NextRequest } from 'next/server.js'
 

@@ -9,7 +9,6 @@ import Wheel from '@/components/Wheel';
 import TipTony from '@/components/TipTony';
 import Share from '@/components/Share';
 import React from 'react';
-import posthog from 'posthog-js';
 import Privacy from '@/components/Privacy';
 
 // Using a local SVG wheel component to avoid external dependency issues
@@ -34,6 +33,9 @@ interface Suggestion {
 type Meal = 'dinner' | 'lunch' | 'snack' | 'coffee' | 'breakfast' | 'dessert' | 'drinks' | 'pizza' | 'vegan' | 'vegetarian';
 
 export default function Home() {
+  // Helper to safely access posthog (only available in production)
+  const safePosthog = typeof window !== 'undefined' && (window as any).posthog;
+  
   const [location, setLocation] = useState('');
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [wheelRestaurants, setWheelRestaurants] = useState<Restaurant[]>([]);
@@ -266,7 +268,7 @@ export default function Home() {
     if (!location.trim()) return;
     const qp = { queryText: location.trim() } as const;
     setLastParams(qp);
-    try { posthog.capture('location_submit', { location: qp.queryText, meal, exclude_fast_food: excludeFastFood }); } catch {}
+    try { safePosthog?.capture('location_submit', { location: qp.queryText, meal, exclude_fast_food: excludeFastFood }); } catch {}
     await fetchRestaurants({ ...qp, radius: radiusMeters, meal: meal ?? undefined });
     setStep(2);
   };
@@ -278,7 +280,7 @@ export default function Home() {
     if (filtered.length === 0) return;
     // Per-spin random sample up to 30
     const pool = filtered.length > 30 ? randomSample(filtered, 30) : filtered;
-    try { posthog.capture('wheel_spin', { pool_size: pool.length, exclude_fast_food: excludeFastFood }); } catch {}
+    try { safePosthog?.capture('wheel_spin', { pool_size: pool.length, exclude_fast_food: excludeFastFood }); } catch {}
     setWheelRestaurants(pool);
     setIsSpinning(true);
     setShowResult(false);
@@ -290,7 +292,7 @@ export default function Home() {
     setIsSpinning(false);
     const source = wheelRestaurants.length > 0 ? wheelRestaurants : restaurants;
     const chosen = source[prizeNumber];
-    try { posthog.capture('wheel_result', { id: chosen?.id, name: chosen?.name, cuisine: chosen?.cuisine, distance: chosen?.distance, amenity: chosen?.amenity }); } catch {}
+    try { safePosthog?.capture('wheel_result', { id: chosen?.id, name: chosen?.name, cuisine: chosen?.cuisine, distance: chosen?.distance, amenity: chosen?.amenity }); } catch {}
     setSelectedRestaurant(chosen);
     setShowResult(true);
     setStep(3);
@@ -395,27 +397,34 @@ export default function Home() {
       };
 
       let usedRadius = params.radius ?? radiusMeters;
+      console.log(`[Radius Search] Trying radius ${usedRadius}m (~${Math.round(usedRadius / 1609)} miles)`);
       let data = await tryFetch(usedRadius);
       if (requestSeq !== fetchSeqRef.current) return; // a newer request started; ignore
       setOriginLabel(data.origin?.label || null);
       let list: Restaurant[] = Array.isArray(data.restaurants) ? data.restaurants : [];
+      console.log(`[Radius Search] Radius ${usedRadius}m returned ${list.length} results with names`);
 
       // If empty, escalate radius through the predefined steps
       if (list.length === 0) {
         const currentIdx = Math.max(0, radiusSteps.findIndex(v => v === usedRadius));
         for (let i = currentIdx + 1; i < radiusSteps.length; i++) {
           const nextR = radiusSteps[i];
+          console.log(`[Radius Search] No results at ${usedRadius}m, escalating to ${nextR}m (~${Math.round(nextR / 1609)} miles)`);
           dlog('escalating radius', { ctx: context, from: usedRadius, to: nextR });
           const d2 = await tryFetch(nextR);
           if (requestSeq !== fetchSeqRef.current) return; // ignore outdated escalation
           const l2: Restaurant[] = Array.isArray(d2.restaurants) ? d2.restaurants : [];
+          console.log(`[Radius Search] Radius ${nextR}m returned ${l2.length} results with names`);
           if (l2.length > 0) {
             data = d2;
             list = l2;
             usedRadius = nextR;
+            console.log(`[Radius Search] Found results! Using radius ${usedRadius}m (~${Math.round(usedRadius / 1609)} miles) with ${list.length} places`);
             break;
           }
         }
+      } else {
+        console.log(`[Radius Search] Found results! Using radius ${usedRadius}m (~${Math.round(usedRadius / 1609)} miles) with ${list.length} places`);
       }
 
       if (list.length > 1 && list.length % 2 === 1) {
@@ -425,7 +434,7 @@ export default function Home() {
       if (requestSeq !== fetchSeqRef.current) return;
       if (usedRadius !== radiusMeters) setRadiusMeters(usedRadius);
       setRestaurants(list);
-      try { posthog.capture('search_results', { count: list.length, used_radius_m: usedRadius, meal: params.meal ?? meal, exclude_fast_food: excludeFastFood }); } catch {}
+      try { safePosthog?.capture('search_results', { count: list.length, used_radius_m: usedRadius, meal: params.meal ?? meal, exclude_fast_food: excludeFastFood }); } catch {}
       dlog('final results', { ctx: context, usedRadius, count: list.length });
       // Merge into cache (cap 100 by unique id)
       setCachedRestaurants(prev => {
@@ -446,7 +455,7 @@ export default function Home() {
       } else {
         setError(e.message || 'Something went wrong');
       }
-      try { posthog.capture('search_error', { message: e?.message || String(e) }); } catch {}
+      try { safePosthog?.capture('search_error', { message: e?.message || String(e) }); } catch {}
     } finally {
       // Only clear loading if this is the latest request
       if (requestSeq === fetchSeqRef.current) {
@@ -546,7 +555,7 @@ export default function Home() {
                       setWheelRestaurants([]);
                       setSelectedRestaurant(null);
                       setShowResult(false);
-                      try { posthog.capture('meal_selected', { meal: val }); } catch {}
+                      try { safePosthog?.capture('meal_selected', { meal: val }); } catch {}
                     }}
                     disabled={loading}
                   >
@@ -577,7 +586,7 @@ export default function Home() {
                             setUserEditedLocation(false);
                             justSelectedRef.current = true;
                             setTimeout(() => { justSelectedRef.current = false; }, 400);
-                            try { posthog.capture('location_autocomplete_selected', { label: s.label, lat: s.lat, lon: s.lon }); } catch {}
+                            try { safePosthog?.capture('location_autocomplete_selected', { label: s.label, lat: s.lat, lon: s.lon }); } catch {}
                           }}
                         >
                           {s.label}
@@ -593,7 +602,7 @@ export default function Home() {
                     type="checkbox"
                     className="h-4 w-4 accent-amber-600"
                     checked={excludeFastFood}
-                    onChange={(e) => { setExcludeFastFood(e.target.checked); try { posthog.capture('exclude_fast_food_toggled', { value: e.target.checked }); } catch {} }}
+                    onChange={(e) => { setExcludeFastFood(e.target.checked); try { safePosthog?.capture('exclude_fast_food_toggled', { value: e.target.checked }); } catch {} }}
                   />
                   Exclude Fast Food
                 </label>
@@ -612,7 +621,7 @@ export default function Home() {
                       const qp = { queryText: q } as const;
                       setLastParams(qp);
                       setSearchTriggered(true);
-                      try { posthog.capture('search_clicked', { location: q, meal, exclude_fast_food: excludeFastFood, radius_m: radiusMeters }); } catch {}
+                      try { safePosthog?.capture('search_clicked', { location: q, meal, exclude_fast_food: excludeFastFood, radius_m: radiusMeters }); } catch {}
                       await fetchRestaurants({ ...qp, radius: radiusMeters, meal });
                       setStep(2);
                     }}
@@ -623,9 +632,6 @@ export default function Home() {
                   </button>
                 )}
               </div>
-              {searchTriggered && hasLocation && hasMeal && !loading && !hasResults && (
-                <p className="mt-2 text-sm text-amber-300 text-center">Tony's gotta think a little harder... and widen the search radius.</p>
-              )}
               {searchTriggered && hasLocation && hasMeal && loading && (
                 <p className="mt-4 text-sm text-amber-200 text-center" aria-live="polite" style={{ fontFamily: 'var(--font-quote)' }}>
                   {thinkingIdx === 0 ? 'Tony is thinking...' : tonyThinkingQuotes[thinkingIdx]}
@@ -647,6 +653,39 @@ export default function Home() {
           {step === 2 && (
             <React.Fragment>
               {/* location/meal/radius moved to step 1; Screen 2 only shows wheel */}
+              {restaurants.length === 0 && (
+                <div className="text-center py-8">
+                  {loading && (
+                    <div className="mb-4">
+                      <p className="text-amber-200 text-lg mb-2" style={{ fontFamily: 'var(--font-quote)' }}>
+                        {tonyThinkingQuotes[thinkingIdx] || 'Tony is thinking...'}
+                      </p>
+                      <div className="w-full flex justify-center">
+                        <div className="relative w-64 h-8 overflow-hidden flex items-center justify-center">
+                          <picture>
+                            <source srcSet="/step-progress.webp" type="image/webp" />
+                            <img src="/step-progress.gif" alt="Searching..." className="h-8" />
+                          </picture>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {!loading && (
+                    <>
+                      <p className="text-amber-300 mb-4" style={{ fontFamily: 'var(--font-quote)' }}>
+                    Tony couldn't find anything nearby. Try again or widen the search radius.
+                  </p>
+                      <button 
+                        onClick={() => { setStep(1); setRestaurants([]); setWheelRestaurants([]); setCachedRestaurants([]); }}
+                        className="text-amber-200 underline"
+                        style={{ fontFamily: 'var(--font-quote)' }}
+                      >
+                        Back to Start
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
               {restaurants.length > 0 && (
                 <div className="text-center">
                   <div className="mb-4 flex flex-row items-center justify-center gap-1">
@@ -737,7 +776,7 @@ export default function Home() {
                 </div>
               </div>
               <div className="mt-4 p-3 bg-slate-700 rounded-lg animate-fade-in">
-                <h3 className="text-lg font-bold text-amber-300 mb-2 flex items-center justify-center">
+                <h3 className="text-2xl font-bold text-amber-300 mb-2 flex items-center justify-center">
                   <FaMapMarkerAlt className="mr-2 text-amber-400" />
                   {selectedRestaurant.name}
                 </h3>
@@ -746,9 +785,10 @@ export default function Home() {
                     {selectedRestaurant.address}
                   </p>
                 )}
-                <p className="text-amber-200">{selectedRestaurant.cuisine} • {selectedRestaurant.distance} away</p>
+                {/* <p className="text-amber-200">{selectedRestaurant.cuisine}</p> */}
+                <p className="text-amber-200">{selectedRestaurant.distance} away</p>
                 
-                <div className="mt-4 flex flex-col items-center gap-2">
+                <div className="mt-4 flex flex-row items-center gap-2">
                   <button
                     onClick={spinAgain}
                     className="px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-lg flex items-center shadow ring-1 ring-amber-500/60"
@@ -765,7 +805,7 @@ export default function Home() {
                     style={{ fontFamily: 'var(--font-quote)' }}
                   >
                     <FaUtensils className="mr-2" />
-                    Let's go, Tony! (map it)
+                    Map it Tony!
                   </a>
                 </div>
               </div>

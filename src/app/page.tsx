@@ -9,6 +9,7 @@ import Wheel from '@/components/Wheel';
 import TipTony from '@/components/TipTony';
 import Share from '@/components/Share';
 import React from 'react';
+import { trackEvent } from '../lib/plausibleClient';
 import Privacy from '@/components/Privacy';
 
 // Using a local SVG wheel component to avoid external dependency issues
@@ -285,6 +286,9 @@ export default function Home() {
     setShowResult(false);
     const randomIndex = Math.floor(Math.random() * pool.length);
     setPrizeNumber(randomIndex);
+    try {
+      trackEvent('spin_wheel', { pool_size: pool.length, exclude_fast_food: excludeFastFood });
+    } catch {}
   };
 
   const onStopSpinning = () => {
@@ -295,9 +299,13 @@ export default function Home() {
     setSelectedRestaurant(chosen);
     setShowResult(true);
     setStep(3);
+    try {
+      trackEvent('wheel_result', { id: chosen?.id, name: chosen?.name, cuisine: chosen?.cuisine });
+    } catch {}
   };
 
   const spinAgain = () => {
+    try { trackEvent('spin_again'); } catch {}
     // Return to wheel view and trigger a new spin
     setShowResult(false);
     setStep(2);
@@ -620,6 +628,7 @@ export default function Home() {
                       const qp = { queryText: q } as const;
                       setLastParams(qp);
                       setSearchTriggered(true);
+                      try { trackEvent('search_clicked', { location: q, meal, exclude_fast_food: excludeFastFood, radius_m: radiusMeters }); } catch {}
 
                       await fetchRestaurants({ ...qp, radius: radiusMeters, meal });
                       setStep(2);
@@ -800,6 +809,7 @@ export default function Home() {
                     target="_blank"
                     rel="noopener noreferrer"
                     href={selectedRestaurant.lat && selectedRestaurant.lon ? `https://www.google.com/maps/search/?api=1&query=${selectedRestaurant.lat},${selectedRestaurant.lon}` : '#'}
+                    onClick={() => { try { trackEvent('map_clicked', { id: selectedRestaurant.id, name: selectedRestaurant.name }); } catch {} }}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg flex items-center"
                     style={{ fontFamily: 'var(--font-quote)' }}
                   >

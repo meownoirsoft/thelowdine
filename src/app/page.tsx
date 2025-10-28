@@ -87,7 +87,8 @@ export default function Home() {
     const mailSubject = encodeURIComponent('Dinner pick from LowDine');
     const mailBody = encodeURIComponent(`${shareTextRaw}\n${mapUrl}`);
     const smsBody = encodeURIComponent(`${shareTextRaw} ${mapUrl}`);
-    return { mapUrl, shareText, mailSubject, mailBody, smsBody };
+    const url = process.env.NEXT_PUBLIC_SITE_URL || 'https://thelowdine.com';
+    return { url, mapUrl, shareText, mailSubject, mailBody, smsBody };
   }, [selectedRestaurant]);
 
   const radiusSteps = [2500, 5000, 10000, 16093, 24140] as const;

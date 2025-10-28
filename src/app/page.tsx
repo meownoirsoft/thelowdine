@@ -78,15 +78,16 @@ export default function Home() {
     if (!selectedRestaurant) return null;
     const name = encodeURIComponent(selectedRestaurant.name);
     const addressText = selectedRestaurant.address ? ` — ${selectedRestaurant.address}` : '';
-    const url = selectedRestaurant.lat && selectedRestaurant.lon
-      ? `https://www.google.com/maps/search/?api=1&query=${selectedRestaurant.lat},${selectedRestaurant.lon}`
+    // Map URL uses only address for more accurate results
+    const mapUrl = selectedRestaurant.lat && selectedRestaurant.lon
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedRestaurant.address || `${selectedRestaurant.lat},${selectedRestaurant.lon}`)}`
       : `https://www.google.com/search?q=${name}`;
     const shareTextRaw = `LowDine picked: ${selectedRestaurant.name}${addressText}`;
     const shareText = encodeURIComponent(shareTextRaw);
     const mailSubject = encodeURIComponent('Dinner pick from LowDine');
-    const mailBody = encodeURIComponent(`${shareTextRaw}\n${url}`);
-    const smsBody = encodeURIComponent(`${shareTextRaw} ${url}`);
-    return { url, shareText, mailSubject, mailBody, smsBody };
+    const mailBody = encodeURIComponent(`${shareTextRaw}\n${mapUrl}`);
+    const smsBody = encodeURIComponent(`${shareTextRaw} ${mapUrl}`);
+    return { mapUrl, shareText, mailSubject, mailBody, smsBody };
   }, [selectedRestaurant]);
 
   const radiusSteps = [2500, 5000, 10000, 16093, 24140] as const;
@@ -808,7 +809,7 @@ export default function Home() {
                   <a
                     target="_blank"
                     rel="noopener noreferrer"
-                    href={selectedRestaurant.lat && selectedRestaurant.lon ? `https://www.google.com/maps/search/?api=1&query=${selectedRestaurant.lat},${selectedRestaurant.lon}` : '#'}
+                    href={share?.mapUrl}
                     onClick={() => { try { trackEvent('map_clicked', { id: selectedRestaurant.id, name: selectedRestaurant.name }); } catch {} }}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg flex items-center"
                     style={{ fontFamily: 'var(--font-quote)' }}

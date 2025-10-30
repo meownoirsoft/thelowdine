@@ -91,7 +91,6 @@ async function geocode(text: string) {
     const item = data[0];
     return { lat: parseFloat(item.lat), lon: parseFloat(item.lon), display_name: item.display_name as string };
   } catch (e) {
-    console.log('[API] geocode error', (e as any)?.message || String(e));
     return null;
   } finally {
     clearTimeout(to);
@@ -109,7 +108,6 @@ async function getRestaurantsFromDB(
   const key = cacheKey(lat, lon, radiusMeters, amenities, opts);
   const cached = DB_CACHE.get(key);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
-    console.log('[API] getRestaurantsFromDB: cache hit', { key, count: Array.isArray(cached.data) ? cached.data.length : 0 });
     return cached.data;
   }
 
@@ -160,9 +158,7 @@ async function getRestaurantsFromDB(
       LIMIT 200
     `;
 
-    console.log('[API] PostgreSQL Query', { query, params: queryParams });
     const result = await pool.query(query, queryParams);
-    console.log('[API] DB returned', result.rows.length, 'results');
 
     // Filter by actual distance using Haversine
     const radiusMiles = radiusMeters / 1609.34;
@@ -172,8 +168,6 @@ async function getRestaurantsFromDB(
         return { ...row, distanceMiles: distance };
       })
       .filter((row: any) => row.distanceMiles <= radiusMiles);
-
-    console.log('[API] After Haversine filtering:', filtered.length, 'results within', radiusMiles.toFixed(2), 'miles');
 
     const out = filtered.map((row: any) => ({
       id: row.id,
@@ -263,36 +257,21 @@ export const POST = async (req: NextRequest) => {
         break;
     }
 
-    console.log('[API] Starting search', { meal, amenities, opts, radiusMeters, lat: origin.lat, lon: origin.lon });
     let listings = await getRestaurantsFromDB(origin.lat, origin.lon, radiusMeters, amenities, opts);
-    console.log('[API] Initial search returned', listings.length, 'results');
 
     if (listings.length === 0 && meal === 'coffee') {
-      console.log('[API] Coffee: trying with fast_food added');
       listings = await getRestaurantsFromDB(origin.lat, origin.lon, radiusMeters, ['cafe', 'fast_food'], {});
-      console.log('[API] Coffee with fast_food returned', listings.length, 'results');
     }
-
-    console.log('[API] Before filtering:', listings.length, 'places');
 
     const filtered = listings.filter((r: any) => {
       const nm = (r.name || '').trim();
-      if (!nm) {
-        console.log('[API] Filtering out unnamed place:', r.amenity, r.cuisine);
-        return false;
-      }
-      if (/^unnamed/i.test(nm)) {
-        console.log('[API] Filtering out "Unnamed" place');
-        return false;
-      }
+      if (!nm) return false;
+      if (/^unnamed/i.test(nm)) return false;
       return true;
     });
-
-    console.log('[API] After filtering:', filtered.length, 'places with names');
     
     // Sort by quality score (higher is better) to deprioritize potentially stale data
     filtered.sort((a: any, b: any) => (b.qualityScore || 0) - (a.qualityScore || 0));
-    console.log('[API] Top quality scores:', filtered.slice(0, 5).map((r: any) => ({ name: r.name, score: r.qualityScore })));
     
     const withDistance = filtered.map((r: any) => {
       const miles = haversineMiles(origin!.lat, origin!.lon, r.lat, r.lon);
@@ -313,7 +292,6 @@ export const POST = async (req: NextRequest) => {
       { headers: { 'Cache-Control': 'no-store, max-age=0' } }
     );
   } catch (e) {
-    console.log('[API] POST handler error', (e as any)?.message || String(e));
     return NextResponse.json(
       { error: 'Server error' },
       { status: 500, headers: { 'Cache-Control': 'no-store, max-age=0' } }

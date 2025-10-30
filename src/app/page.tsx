@@ -72,7 +72,7 @@ export default function Home() {
   const searchParams = useSearchParams();
 
   // Debug logging flag and helper
-  const DEBUG = true;
+  const DEBUG = false;
   const dlog = (...args: any[]) => { if (DEBUG) console.log('[LowDine]', ...args); };
 
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -438,34 +438,27 @@ export default function Home() {
       };
 
       let usedRadius = params.radius ?? radiusMeters;
-      console.log(`[Radius Search] Trying radius ${usedRadius}m (~${Math.round(usedRadius / 1609)} miles)`);
       let data = await tryFetch(usedRadius);
       if (requestSeq !== fetchSeqRef.current) return; // a newer request started; ignore
       setOriginLabel(data.origin?.label || null);
       let list: Restaurant[] = Array.isArray(data.restaurants) ? data.restaurants : [];
-      console.log(`[Radius Search] Radius ${usedRadius}m returned ${list.length} results with names`);
 
       // If empty, escalate radius through the predefined steps
       if (list.length === 0) {
         const currentIdx = Math.max(0, radiusSteps.findIndex(v => v === usedRadius));
         for (let i = currentIdx + 1; i < radiusSteps.length; i++) {
           const nextR = radiusSteps[i];
-          console.log(`[Radius Search] No results at ${usedRadius}m, escalating to ${nextR}m (~${Math.round(nextR / 1609)} miles)`);
           dlog('escalating radius', { ctx: context, from: usedRadius, to: nextR });
           const d2 = await tryFetch(nextR);
           if (requestSeq !== fetchSeqRef.current) return; // ignore outdated escalation
           const l2: Restaurant[] = Array.isArray(d2.restaurants) ? d2.restaurants : [];
-          console.log(`[Radius Search] Radius ${nextR}m returned ${l2.length} results with names`);
           if (l2.length > 0) {
             data = d2;
             list = l2;
             usedRadius = nextR;
-            console.log(`[Radius Search] Found results! Using radius ${usedRadius}m (~${Math.round(usedRadius / 1609)} miles) with ${list.length} places`);
             break;
           }
         }
-      } else {
-        console.log(`[Radius Search] Found results! Using radius ${usedRadius}m (~${Math.round(usedRadius / 1609)} miles) with ${list.length} places`);
       }
 
       if (list.length > 1 && list.length % 2 === 1) {

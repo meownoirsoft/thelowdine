@@ -663,6 +663,10 @@ export default function Home() {
                       const qp = { queryText: q } as const;
                       setLastParams(qp);
                       setSearchTriggered(true);
+                      // Clear cache to ensure fresh results for new location
+                      setCachedRestaurants([]);
+                      setRestaurants([]);
+                      setWheelRestaurants([]);
                       try { trackEvent('search_clicked', { location: q, meal, exclude_fast_food: excludeFastFood, radius_m: radiusMeters }); } catch {}
 
                       await fetchRestaurants({ ...qp, radius: radiusMeters, meal });

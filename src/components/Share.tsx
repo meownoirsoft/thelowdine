@@ -52,7 +52,7 @@ export default function Share({ share }: { share: ShareData }) {
             </a>
             <a
               className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-amber-50"
-              href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(share.url)}`}
+              href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(share.url)}&quote=${encodeURIComponent(share.shareText)}`}
               target="_blank" rel="noopener noreferrer"
               onClick={() => { try { trackEvent('share_facebook'); } catch {} }}
             >

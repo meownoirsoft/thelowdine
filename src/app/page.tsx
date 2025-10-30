@@ -797,7 +797,16 @@ export default function Home() {
                     {isSpinning ? 'Spinning...' : 'Spin the Wheel'}
                   </button>
                   <div>
-                    <button className="mt-2 text-amber-200 underline" style={{ fontFamily: 'var(--font-quote)' }} onClick={() => { try { trackEvent('back_to_start_clicked', { from: 'wheel_view' }); } catch {} setStep(1); }}>Back to Start</button>
+                    <button 
+                      className="mt-2 text-amber-200 underline" 
+                      style={{ fontFamily: 'var(--font-quote)' }} 
+                      onClick={() => { 
+                        try { trackEvent('back_to_start_clicked', { from: 'wheel_view' }); } catch {}
+                        setStep(1); 
+                      }}
+                    >
+                      Back to Start
+                    </button>
                   </div>
                 </div>
               )}
@@ -840,7 +849,10 @@ export default function Home() {
                 
                 <div className="mt-4 flex flex-row items-center gap-2">
                   <button
-                    onClick={() => { try { trackEvent('double_or_muffin_clicked'); } catch {} ; spinAgain(); }}
+                    onClick={() => { 
+                      try { trackEvent('double_or_muffin_clicked'); } catch {}
+                      spinAgain(); 
+                    }}
                     className="px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-lg flex items-center shadow ring-1 ring-amber-500/60"
                     style={{ fontFamily: 'var(--font-quote)' }}
                   >
@@ -861,7 +873,17 @@ export default function Home() {
                 </div>
               </div>
               <div className="mt-3 flex items-center justify-center">
-                <button className="text-amber-200 underline" style={{ fontFamily: 'var(--font-quote)' }} onClick={() => { try { trackEvent('back_to_start_clicked', { from: 'result_view' }); } catch {} setShowResult(false); setStep(1); }}>Back to Start</button>
+                <button 
+                  className="text-amber-200 underline" 
+                  style={{ fontFamily: 'var(--font-quote)' }} 
+                  onClick={() => { 
+                    try { trackEvent('back_to_start_clicked', { from: 'result_view' }); } catch {}
+                    setShowResult(false); 
+                    setStep(1); 
+                  }}
+                >
+                  Back to Start
+                </button>
               </div>
               <div className="mt-4 px-3 py-3 border-t border-amber-900/40">
                 <p className="text-center text-amber-300 text-sm mb-2" style={{ fontFamily: 'var(--font-quote)' }}>

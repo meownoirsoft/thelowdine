@@ -24,7 +24,7 @@ function rateLimited(ip: string): boolean {
 
 async function fetchGeoapify(q: string, apiKey?: string) {
   if (!apiKey) throw new Error('Missing GEOAPIFY_KEY');
-  const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(q)}&limit=7&format=json&apiKey=${apiKey}`;
+  const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(q)}&limit=7&format=json&filter=countrycode:us&apiKey=${apiKey}`;
   const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
   if (res.status === 429) {
     throw Object.assign(new Error('Geoapify rate limit'), { code: 429 });
@@ -33,27 +33,35 @@ async function fetchGeoapify(q: string, apiKey?: string) {
   const data = await res.json();
   const items = (data?.results || data?.features || data?.results || []) as any[];
   const suggestions = items
-    .map((it: any) => ({
-      label: it.formatted || it.result || it.display_name || [it.address_line1, it.address_line2].filter(Boolean).join(', '),
-      lat: it.lat ?? it.geometry?.coordinates?.[1],
-      lon: it.lon ?? it.geometry?.coordinates?.[0],
-    }))
+    .map((it: any) => {
+      let label = it.formatted || it.result || it.display_name || [it.address_line1, it.address_line2].filter(Boolean).join(', ');
+      label = label.replace(/, United States of America$/i, '');
+      return {
+        label,
+        lat: it.lat ?? it.geometry?.coordinates?.[1],
+        lon: it.lon ?? it.geometry?.coordinates?.[0],
+      };
+    })
     .filter((s) => s.label && s.lat != null && s.lon != null);
   return { suggestions };
 }
 
 async function fetchLocationIQ(q: string, apiKey?: string) {
   if (!apiKey) throw new Error('Missing LOCATIONIQ_KEY');
-  const url = `https://us1.locationiq.com/v1/autocomplete?key=${apiKey}&q=${encodeURIComponent(q)}&limit=7&tag=place,address`;
+  const url = `https://us1.locationiq.com/v1/autocomplete?key=${apiKey}&q=${encodeURIComponent(q)}&limit=7&tag=place,address&countrycodes=us`;
   const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
   if (!res.ok) throw new Error(`LocationIQ failed: ${res.status}`);
   const data = await res.json();
   const suggestions = (Array.isArray(data) ? data : [])
-    .map((it: any) => ({
-      label: it?.display_place ? `${it.display_place}, ${it.display_address}` : it?.display_name,
-      lat: it?.lat ? Number(it.lat) : undefined,
-      lon: it?.lon ? Number(it.lon) : undefined,
-    }))
+    .map((it: any) => {
+      let label = it?.display_place ? `${it.display_place}, ${it.display_address}` : it?.display_name;
+      label = label?.replace(/, United States of America$/i, '') || label;
+      return {
+        label,
+        lat: it?.lat ? Number(it.lat) : undefined,
+        lon: it?.lon ? Number(it.lon) : undefined,
+      };
+    })
     .filter((s) => s.label && s.lat != null && s.lon != null);
   return { suggestions };
 }

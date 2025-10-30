@@ -47,7 +47,7 @@ const tony = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'The Lowdine - Dinner Decider',
+  title: 'The Lowdine - Eat Out Roulette',
   description: 'Let Tony Spinelli decide your feast fate',
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
   themeColor: '#0f172a',

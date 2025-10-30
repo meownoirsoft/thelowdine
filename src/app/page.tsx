@@ -68,6 +68,7 @@ export default function Home() {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [excludeFastFood, setExcludeFastFood] = useState(false);
   const [searchTriggered, setSearchTriggered] = useState(false);
+  const [autocompleteLoading, setAutocompleteLoading] = useState(false);
   const searchParams = useSearchParams();
 
   // Debug logging flag and helper
@@ -269,20 +270,41 @@ export default function Home() {
       setShowSuggestions(false);
       return;
     }
+    
+    // Check if input is a 5-digit zip code
+    const isZipCode = /^\d{5}$/.test(q);
+    
     const ctrl = new AbortController();
     const t = setTimeout(async () => {
       try {
         const label = `autocomplete ${q}`;
         if (DEBUG) console.time(label);
+        setAutocompleteLoading(true);
         const res = await fetch(`/api/autocomplete?q=${encodeURIComponent(q)}`, { signal: ctrl.signal });
         if (!res.ok) throw new Error('autocomplete failed');
         const data = await res.json();
         const list: Suggestion[] = Array.isArray(data?.suggestions) ? data.suggestions : [];
-        setSuggestions(list);
-        setShowSuggestions(list.length > 0);
-        dlog('autocomplete results', { q, count: list.length });
+        
+        // If it's a zip code and we got results, auto-select the first one
+        if (isZipCode && list.length > 0) {
+          const first = list[0];
+          setLocation(first.label);
+          const cp = { coords: { lat: first.lat, lon: first.lon } } as const;
+          setLastParams(cp);
+          setSuggestions([]);
+          setShowSuggestions(false);
+          setUserEditedLocation(false);
+          dlog('auto-selected zip code', { q, result: first.label });
+        } else {
+          setSuggestions(list);
+          setShowSuggestions(list.length > 0);
+          dlog('autocomplete results', { q, count: list.length });
+        }
         if (DEBUG) console.timeEnd(label);
       } catch {}
+      finally {
+        setAutocompleteLoading(false);
+      }
     }, 300);
     return () => {
       clearTimeout(t);
@@ -509,7 +531,7 @@ export default function Home() {
         {step === 1 && (
           <div className="mb-3 px-1">
             <p className="text-center text-amber-200 text-base text-lg leading-snug" style={{ fontFamily: 'var(--font-tony)' }}>
-              Don't wanna go nine rounds with <br />your better half on where to eat? <br /><small>Relax friend, Tony's got you covered. BOOM.</small>
+              Don't wanna go nine rounds with <br />your better half on where to eat? <br />Relax friend, Tony's got you covered. <b>BOOM.</b>
             </p>
           </div>
         )}
@@ -537,7 +559,7 @@ export default function Home() {
                       className="w-full h-12 sm:h-14 flex items-center justify-center text-2xl sm:text-3xl font-bold tracking-normal text-slate-900 leading-tight text-center shadow"
                       style={{ fontFamily: 'var(--font-tony)', backgroundImage: "url('/name-ribbon.webp')", backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
                     >
-                      <span className="-translate-y-[2px] inline-block">Tony Spinelli</span>
+                      <span className="-translate-y-[2px] inline-block" style={{fontSize: '1.5rem'}}>Tony Spinelli</span>
                     </div>
                   </div>
                 </div>
@@ -552,98 +574,109 @@ export default function Home() {
                   <FaLocationArrow /> Use my location
                 </button>
               </div>
-              <div className="mb-3">
-                <div className="flex items-center justify-center gap-2 relative">
-                  <input
-                    type="text"
-                    value={location}
-                    onChange={(e) => { setLocation(e.target.value); setUserEditedLocation(true); }}
-                    onFocus={(e) => {
-                      // select all so new typing replaces previous entry
-                      e.currentTarget.select();
-                      if (userEditedLocation && suggestions.length > 0) setShowSuggestions(true);
-                    }}
-                    onMouseUp={(e) => {
-                      // prevent clearing the programmatic selection on mouse up
-                      e.preventDefault();
-                    }}
-                    onBlur={() => {
-                      // delay to allow click on suggestion
-                      setTimeout(() => setShowSuggestions(false), 150);
-                    }}
-                    placeholder="Enter your location or zip code"
-                    className="w-48 sm:w-64 px-3 py-2 rounded-lg bg-slate-700 text-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    style={{ fontFamily: 'var(--font-quote)' }}
-                  />
-                  <select
-                    className="bg-slate-700 text-amber-50 rounded px-2 py-2"
-                    style={{ fontFamily: 'var(--font-quote)' }}
-                    value={meal ?? ''}
-                    onChange={(e) => {
-                      const v = e.target.value as Meal | '';
-                      const val = v === '' ? null : v;
-                      setMeal(val);
-                      // Clear prior meal/location cache to ensure fresh fetch for the new meal
-                      setCachedRestaurants([]);
-                      setRestaurants([]);
-                      setWheelRestaurants([]);
-                      setSelectedRestaurant(null);
-                      setShowResult(false);
-
-                    }}
-                    disabled={loading}
-                  >
-                    <option value="" disabled>Meal?</option>
-                    <option value="dinner">Dinner</option>
-                    <option value="lunch">Lunch</option>
-                    <option value="snack">Snack</option>
-                    <option value="coffee">Coffee</option>
-                    <option value="breakfast">Breakfast</option>
-                    <option value="dessert">Dessert</option>
-                    <option value="drinks">Drinks</option>
-                  </select>
-                  {showSuggestions && suggestions.length > 0 && (
-                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-[min(20rem,90vw)] max-h-56 overflow-auto bg-slate-800 border border-slate-700 rounded-md shadow-lg z-20">
-                      {suggestions.map((s, idx) => (
-                        <button
-                          key={idx}
-                          className="w-full text-left px-3 py-2 hover:bg-slate-700 text-amber-50"
-                          onClick={() => {
-                            setLocation(s.label);
-                            const cp = { coords: { lat: s.lat, lon: s.lon } } as const;
-                            setLastParams(cp);
-                            setShowSuggestions(false);
-                            setSuggestions([]);
-                            setUserEditedLocation(false);
-                            justSelectedRef.current = true;
-                            setTimeout(() => { justSelectedRef.current = false; }, 400);
-
-                          }}
-                        >
-                          {s.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="mt-2 flex items-center justify-center">
-                <label className="flex items-center gap-2 text-amber-200 text-sm" style={{ fontFamily: 'var(--font-quote)' }}>
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 accent-amber-600"
-                    checked={excludeFastFood}
-                    onChange={(e) => setExcludeFastFood(e.target.checked)}
-                  />
-                  Exclude Fast Food
-                </label>
-              </div>
-              <div className="mt-2 text-center">
-                <p className="text-amber-200 text-md sm:text-sm" style={{ fontFamily: 'var(--font-quote)' }}>
-                  Just add zip/address and meal you're hankering for, and Tony will let 'er rip!
+              <div className="mb-2 text-center">
+                <p className="text-amber-200 text-lg sm:text-md" style={{ fontFamily: 'var(--font-quote)' }}>
+                  Add zip/address & meal you're craving.
                 </p>
               </div>
-              <div className="mt-3 flex justify-center">
+              <div className="mb-3">
+                <div className="flex flex-col gap-2">
+                  <div className="relative w-full">
+                    <input
+                      type="text"
+                      value={location}
+                      onChange={(e) => { setLocation(e.target.value); setUserEditedLocation(true); }}
+                      onFocus={(e) => {
+                        // select all so new typing replaces previous entry
+                        e.currentTarget.select();
+                        if (userEditedLocation && suggestions.length > 0) setShowSuggestions(true);
+                      }}
+                      onMouseUp={(e) => {
+                        // prevent clearing the programmatic selection on mouse up
+                        e.preventDefault();
+                      }}
+                      onBlur={() => {
+                        // delay to allow click on suggestion
+                        setTimeout(() => { setShowSuggestions(false); setAutocompleteLoading(false); }, 150);
+                      }}
+                      placeholder="Enter your location or zip code"
+                      className="w-full px-3 py-2 rounded-lg bg-slate-700 text-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      style={{ fontFamily: 'var(--font-quote)' }}
+                    />
+                    {autocompleteLoading && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <div className="animate-spin h-4 w-4 border-2 border-amber-500 border-t-transparent rounded-full"></div>
+                      </div>
+                    )}
+                    {showSuggestions && suggestions.length > 0 && (
+                      <div className="absolute left-0 top-full mt-1 w-full max-h-56 overflow-auto bg-slate-950 border border-slate-600 rounded-md shadow-lg z-20">
+                        {suggestions.map((s, idx) => (
+                          <button
+                            key={idx}
+                            className="w-full text-left px-3 py-2 hover:bg-slate-700 text-amber-50"
+                            onClick={() => {
+                              setLocation(s.label);
+                              const cp = { coords: { lat: s.lat, lon: s.lon } } as const;
+                              setLastParams(cp);
+                              setShowSuggestions(false);
+                              setSuggestions([]);
+                              setUserEditedLocation(false);
+                              setAutocompleteLoading(false);
+                              justSelectedRef.current = true;
+                              setTimeout(() => { justSelectedRef.current = false; }, 400);
+
+                            }}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <label className="text-amber-200 text-md" style={{ fontFamily: 'var(--font-quote)' }}>Meal:</label>
+                      <select
+                        className="bg-slate-700 text-amber-50 rounded px-2 py-2"
+                        style={{ fontFamily: 'var(--font-quote)' }}
+                        value={meal ?? ''}
+                        onChange={(e) => {
+                          const v = e.target.value as Meal | '';
+                          const val = v === '' ? null : v;
+                          setMeal(val);
+                          // Clear prior meal/location cache to ensure fresh fetch for the new meal
+                          setCachedRestaurants([]);
+                          setRestaurants([]);
+                          setWheelRestaurants([]);
+                          setSelectedRestaurant(null);
+                          setShowResult(false);
+
+                        }}
+                        disabled={loading}
+                      >
+                        <option value="" disabled>Select</option>
+                        <option value="dinner">Dinner</option>
+                        <option value="lunch">Lunch</option>
+                        <option value="snack">Snack</option>
+                        <option value="coffee">Coffee</option>
+                        <option value="breakfast">Breakfast</option>
+                        <option value="dessert">Dessert</option>
+                        <option value="drinks">Drinks</option>
+                      </select>
+                    </div>
+                    <label className="flex items-center gap-2 text-amber-200 text-md" style={{ fontFamily: 'var(--font-quote)' }}>
+                      &nbsp;&nbsp;<input
+                        type="checkbox"
+                        className="h-4 w-4 accent-amber-600"
+                        checked={excludeFastFood}
+                        onChange={(e) => setExcludeFastFood(e.target.checked)}
+                      />
+                      No Fast Food
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-center">
                 {hasLocation && hasMeal && !loading && (
                   <button
                     onClick={async () => {
@@ -832,7 +865,7 @@ export default function Home() {
                   <a
                     target="_blank"
                     rel="noopener noreferrer"
-                    href={share?.mapUrl}
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedRestaurant.name + ' ' + (selectedRestaurant.address || ''))}`}
                     onClick={() => { try { trackEvent('result_map_clicked', { id: selectedRestaurant.id, name: selectedRestaurant.name }); } catch {} }}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg flex items-center"
                     style={{ fontFamily: 'var(--font-quote)' }}

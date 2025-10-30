@@ -585,9 +585,26 @@ export default function Home() {
                         setTimeout(() => { setShowSuggestions(false); setAutocompleteLoading(false); }, 150);
                       }}
                       placeholder="Enter your location or zip code"
-                      className="w-full px-3 py-2 rounded-lg bg-slate-700 text-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-3 py-2 pr-10 rounded-lg bg-slate-700 text-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500"
                       style={{ fontFamily: 'var(--font-quote)' }}
                     />
+                    {location && !autocompleteLoading && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLocation('');
+                          setUserEditedLocation(true);
+                          setSuggestions([]);
+                          setShowSuggestions(false);
+                        }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-400 hover:text-amber-300 transition-colors"
+                        aria-label="Clear location"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
                     {autocompleteLoading && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
                         <div className="animate-spin h-4 w-4 border-2 border-amber-500 border-t-transparent rounded-full"></div>

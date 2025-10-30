@@ -563,11 +563,20 @@ export default function Home() {
                     <input
                       type="text"
                       value={location}
-                      onChange={(e) => { setLocation(e.target.value); setUserEditedLocation(true); }}
+                      onChange={(e) => { 
+                        setLocation(e.target.value); 
+                        setUserEditedLocation(true);
+                        // Clear old suggestions when user types
+                        if (suggestions.length > 0 && e.target.value !== location) {
+                          setSuggestions([]);
+                          setShowSuggestions(false);
+                        }
+                      }}
                       onFocus={(e) => {
                         // select all so new typing replaces previous entry
                         e.currentTarget.select();
-                        if (userEditedLocation && suggestions.length > 0) setShowSuggestions(true);
+                        // Don't reopen old suggestions on focus
+                        setShowSuggestions(false);
                       }}
                       onMouseUp={(e) => {
                         // prevent clearing the programmatic selection on mouse up

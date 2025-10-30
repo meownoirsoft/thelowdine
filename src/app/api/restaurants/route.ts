@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { setDefaultResultOrder } from 'node:dns';
+import { Pool } from 'pg';
 
 // Ensure Node.js runtime for server-side fetch and DNS control
 export const runtime = 'nodejs';
@@ -8,8 +9,13 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// Simple in-memory cache to smooth over transient Overpass flakiness
-const OVERPASS_CACHE = new Map<string, { ts: number; data: any }>();
+// PostgreSQL connection pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+// Simple in-memory cache
+const DB_CACHE = new Map<string, { ts: number; data: any }>();
 const CACHE_TTL_MS = 1000 * 60 * 5; // 5 minutes
 const CACHE_MAX = 300;
 
@@ -23,18 +29,18 @@ function cacheKey(lat: number, lon: number, radiusMeters: number, amenities: str
 }
 
 function pruneCacheIfNeeded() {
-  if (OVERPASS_CACHE.size <= CACHE_MAX) return;
+  if (DB_CACHE.size <= CACHE_MAX) return;
   // remove oldest
   let oldestKey: string | null = null;
   let oldestTs = Infinity;
-  for (const k of Array.from(OVERPASS_CACHE.keys())) {
-    const v = OVERPASS_CACHE.get(k)!;
+  for (const k of Array.from(DB_CACHE.keys())) {
+    const v = DB_CACHE.get(k)!;
     if (v.ts < oldestTs) {
       oldestTs = v.ts;
       oldestKey = k;
     }
   }
-  if (oldestKey) OVERPASS_CACHE.delete(oldestKey);
+  if (oldestKey) DB_CACHE.delete(oldestKey);
 }
 
 function shuffle<T>(arr: T[]) {
@@ -91,211 +97,105 @@ async function geocode(text: string) {
   }
 }
 
-async function overpassRestaurants(
+async function getRestaurantsFromDB(
   lat: number,
   lon: number,
   radiusMeters: number,
   amenities: string[],
   opts?: { includeCuisineRegex?: string; includeNameRegex?: string; excludeCuisineRegex?: string; excludeNameRegex?: string; diet?: 'vegan' | 'vegetarian' }
 ) {
-  const am = amenities.join('|');
-  const cuisineInclude = opts?.includeCuisineRegex ? ` [\"cuisine\"~\"(${opts.includeCuisineRegex})\", i]` : '';
-  const cuisineExclude = opts?.excludeCuisineRegex ? ` [\"cuisine\"!~\"(${opts.excludeCuisineRegex})\", i]` : '';
-  const nameInclude = opts?.includeNameRegex ? ` [\"name\"~\"(${opts.includeNameRegex})\", i]` : '';
-  const nameExclude = opts?.excludeNameRegex ? ` [\"name\"!~\"(${opts.excludeNameRegex})\", i]` : '';
-  const dietFilter = opts?.diet === 'vegan'
-    ? ` [\"diet:vegan\"=\"yes\"]`
-    : opts?.diet === 'vegetarian'
-    ? ` [\"diet:vegetarian\"=\"yes\"]`
-    : '';
-  const common = `[\"amenity\"~\"^(${am})$\"]${cuisineInclude}${cuisineExclude}${nameInclude}${nameExclude}${dietFilter}`;
-  const query = `
-    [out:json][timeout:30];
-    (
-      node${common}(around:${radiusMeters},${lat},${lon});
-      way${common}(around:${radiusMeters},${lat},${lon});
-      relation${common}(around:${radiusMeters},${lat},${lon});
-    );
-    out center tags 80;
-  `;
-  console.log('[API] Overpass Query length', query.length);
-
-  const endpoints = shuffle([
-    'https://overpass-api.de/api/interpreter',
-    'https://z.overpass-api.de/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter',
-    'https://overpass.nchc.org.tw/api/interpreter',
-    'https://overpass.openstreetmap.ru/api/interpreter'
-  ]);
-
   // Check cache first
   const key = cacheKey(lat, lon, radiusMeters, amenities, opts);
-  const cached = OVERPASS_CACHE.get(key);
+  const cached = DB_CACHE.get(key);
   if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
-    console.log('[API] overpassRestaurants: cache hit', { key, count: Array.isArray(cached.data) ? cached.data.length : 0 });
+    console.log('[API] getRestaurantsFromDB: cache hit', { key, count: Array.isArray(cached.data) ? cached.data.length : 0 });
     return cached.data;
   }
 
-  let data: any = null;
-  for (const ep of endpoints) {
-    // try each endpoint with a couple attempts and exponential backoff
-    const attempts = 3;
-    for (let attempt = 0; attempt < attempts; attempt++) {
-      const attemptStart = Date.now();
-      try {
-        const controller = new AbortController();
-        const to = setTimeout(() => controller.abort(), 30000);
-        // First try POST (recommended)
-        const res = await fetch(ep, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'application/json',
-            'User-Agent': 'Lowdine/1.0 (contact: example@example.com)'
-          },
-          body: new URLSearchParams({ data: query }).toString(),
-          cache: 'no-store',
-          signal: controller.signal,
-        });
-        clearTimeout(to);
-
-        const elapsed = Date.now() - attemptStart;
-        if (!res.ok) {
-          console.log('[API] overpass endpoint non-ok (POST)', { endpoint: ep, status: res.status, attempt, elapsed });
-          // Try GET fallback immediately if POST fails
-          const getUrl = `${ep}?data=${encodeURIComponent(query)}`;
-          const controller2 = new AbortController();
-          const to2 = setTimeout(() => controller2.abort(), 30000);
-          try {
-            const resGet = await fetch(getUrl, {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/json',
-                'User-Agent': 'Lowdine/1.0 (contact: example@example.com)'
-              },
-              cache: 'no-store',
-              signal: controller2.signal,
-            });
-            clearTimeout(to2);
-            if (resGet.ok) {
-              const parsed = await resGet.json();
-              if (parsed && Array.isArray(parsed.elements) && parsed.elements.length > 0) {
-                console.log('[API] overpass endpoint success (GET)', { endpoint: ep, count: parsed.elements.length, attempt, elapsed });
-                data = parsed;
-                break;
-              }
-              console.log('[API] overpass endpoint ok but empty (GET)', { endpoint: ep, attempt, elapsed });
-            } else {
-              console.log('[API] overpass endpoint non-ok (GET)', { endpoint: ep, status: resGet.status, attempt, elapsed });
-            }
-          } catch (e2) {
-            console.log('[API] overpass GET error', { endpoint: ep, attempt, error: (e2 as any)?.message, cause: (e2 as any)?.cause?.code });
-          } finally {
-            clearTimeout(to2);
-          }
-          if (data) break;
-          if (attempt < attempts - 1) {
-            const backoffTime = 500 * Math.pow(2, attempt);
-            console.log(`[API] backing off for ${backoffTime}ms before retry`);
-            await sleep(backoffTime);
-          }
-          continue;
-        }
-
-        const parsed = await res.json();
-        if (parsed && Array.isArray(parsed.elements) && parsed.elements.length > 0) {
-          console.log('[API] overpass endpoint success', { endpoint: ep, count: parsed.elements.length, attempt, elapsed });
-          data = parsed;
-          break;
-        }
-
-        console.log('[API] overpass endpoint ok but empty', { endpoint: ep, attempt, elapsed });
-        if (attempt < attempts - 1) {
-          const backoffTime = 500 * Math.pow(2, attempt);
-          console.log(`[API] backing off for ${backoffTime}ms before retry`);
-          await sleep(backoffTime);
-        }
-      } catch (e) {
-        const msg = (e as any)?.message || String(e);
-        const cause = (e as any)?.cause?.code || (e as any)?.code;
-        console.log('[API] overpass endpoint error', { endpoint: ep, attempt, error: msg, cause });
-        // Try GET fallback when fetch throws
-        try {
-          const getUrl = `${ep}?data=${encodeURIComponent(query)}`;
-          const controller2 = new AbortController();
-          const to2 = setTimeout(() => controller2.abort(), 30000);
-          const resGet = await fetch(getUrl, {
-            method: 'GET',
-            headers: {
-              'Accept': 'application/json',
-              'User-Agent': 'Lowdine/1.0 (contact: example@example.com)'
-            },
-            cache: 'no-store',
-            signal: controller2.signal,
-          });
-          clearTimeout(to2);
-          if (resGet.ok) {
-            const parsed = await resGet.json();
-            if (parsed && Array.isArray(parsed.elements) && parsed.elements.length > 0) {
-              console.log('[API] overpass endpoint success (GET-after-error)', { endpoint: ep, count: parsed.elements.length, attempt });
-              data = parsed;
-            } else {
-              console.log('[API] overpass endpoint ok but empty (GET-after-error)', { endpoint: ep, attempt });
-            }
-          } else {
-            console.log('[API] overpass endpoint non-ok (GET-after-error)', { endpoint: ep, status: resGet.status, attempt });
-          }
-        } catch (e2) {
-          console.log('[API] overpass GET-after-error failed', { endpoint: ep, attempt, error: (e2 as any)?.message, cause: (e2 as any)?.cause?.code });
-        }
-        if (data) break;
-        if (attempt < attempts - 1) {
-          const backoffTime = 500 * Math.pow(2, attempt);
-          console.log(`[API] backing off for ${backoffTime}ms before retry`);
-          await sleep(backoffTime);
-        }
-      }
-      if (data) break;
-    }
-    if (data) break;
-  }
-
-  if (!data) {
-    console.log('[API] overpassRestaurants: no data returned');
-    return [];
-  }
-  if (!data || !Array.isArray(data.elements)) {
-    console.log('[API] overpassRestaurants: no elements array', { dataType: typeof data, keys: data ? Object.keys(data) : [] });
-    return [];
-  }
-
-  console.log('[API] overpassRestaurants: got', data.elements.length, 'elements');
-  const out = data.elements.map((el: any) => {
-    const center = el.type === 'node' ? { lat: el.lat, lon: el.lon } : (el.center || {});
-    const tags = el.tags || {};
-    const result = {
-      id: el.id,
-      name: tags.name || 'Unnamed Restaurant',
-      address: [tags['addr:housenumber'], tags['addr:street'], tags['addr:city']].filter(Boolean).join(' '),
-      cuisine: tags.cuisine || 'Various',
-      amenity: tags.amenity,
-      lat: center.lat,
-      lon: center.lon,
-    };
-    if (!result.lat || !result.lon) {
-      console.log('[API] Element missing coordinates:', el.type, el.id, tags.name || tags.amenity);
-    }
-    return result;
-  }).filter((r: any) => r.lat && r.lon);
-  console.log('[API] overpassRestaurants: filtered to', out.length, 'results with valid coordinates');
-
-  // cache result
   try {
-    pruneCacheIfNeeded();
-    OVERPASS_CACHE.set(key, { ts: Date.now(), data: out });
-  } catch (e) {}
+    // Convert radius from meters to degrees (rough approximation: 1 degree ≈ 111km)
+    const radiusKm = radiusMeters / 1000;
+    const radiusDeg = radiusKm / 111;
 
-  return out;
+    // Build SQL query with filters
+    const queryParams: any[] = [lat - radiusDeg, lat + radiusDeg, lon - radiusDeg, lon + radiusDeg];
+    let whereConditions = [
+      'lat IS NOT NULL',
+      'lon IS NOT NULL',
+      'lat BETWEEN $1 AND $2',
+      'lon BETWEEN $3 AND $4'
+    ];
+
+    // Filter by type (amenity)
+    if (amenities.length > 0) {
+      queryParams.push(amenities);
+      whereConditions.push(`type = ANY($${queryParams.length})`);
+    }
+
+    // Filter by cuisine (if provided)
+    if (opts?.includeCuisineRegex) {
+      queryParams.push(opts.includeCuisineRegex);
+      whereConditions.push(`type ~* $${queryParams.length}`);
+    }
+    if (opts?.excludeCuisineRegex) {
+      queryParams.push(opts.excludeCuisineRegex);
+      whereConditions.push(`type !~* $${queryParams.length}`);
+    }
+
+    // Filter by name (if provided)
+    if (opts?.includeNameRegex) {
+      queryParams.push(opts.includeNameRegex);
+      whereConditions.push(`name ~* $${queryParams.length}`);
+    }
+    if (opts?.excludeNameRegex) {
+      queryParams.push(opts.excludeNameRegex);
+      whereConditions.push(`name !~* $${queryParams.length}`);
+    }
+
+    const query = `
+      SELECT id, name, type, address, lat, lon
+      FROM food_places
+      WHERE ${whereConditions.join(' AND ')}
+      LIMIT 200
+    `;
+
+    console.log('[API] PostgreSQL Query', { query, params: queryParams });
+    const result = await pool.query(query, queryParams);
+    console.log('[API] DB returned', result.rows.length, 'results');
+
+    // Filter by actual distance using Haversine
+    const radiusMiles = radiusMeters / 1609.34;
+    const filtered = result.rows
+      .map((row: any) => {
+        const distance = haversineMiles(lat, lon, row.lat, row.lon);
+        return { ...row, distanceMiles: distance };
+      })
+      .filter((row: any) => row.distanceMiles <= radiusMiles);
+
+    console.log('[API] After Haversine filtering:', filtered.length, 'results within', radiusMiles.toFixed(2), 'miles');
+
+    const out = filtered.map((row: any) => ({
+      id: row.id,
+      name: row.name || 'Unnamed Restaurant',
+      address: row.address || 'Nearby',
+      cuisine: row.type || 'Various',
+      amenity: row.type,
+      lat: parseFloat(row.lat),
+      lon: parseFloat(row.lon),
+      qualityScore: 1, // Default quality score
+    }));
+
+    // Cache result
+    try {
+      pruneCacheIfNeeded();
+      DB_CACHE.set(key, { ts: Date.now(), data: out });
+    } catch (e) {}
+
+    return out;
+  } catch (e) {
+    console.error('[API] Database query error:', (e as any)?.message || String(e));
+    return [];
+  }
 }
 
 export const POST = async (req: NextRequest) => {
@@ -354,16 +254,21 @@ export const POST = async (req: NextRequest) => {
       case 'lunch':
       default:
         amenities = ['restaurant', 'fast_food', 'pub', 'cafe', 'food_court', 'bistro'];
+        // Exclude coffee shops and similar from dinner/lunch results
+        opts = { 
+          excludeCuisineRegex: 'coffee_shop|bubble_tea', 
+          excludeNameRegex: 'Starbucks|Dunkin|Coffee|Peet\'s|Dutch Bros|Tim Hortons|Caribou|Costa Coffee|Cafe Nero'
+        };
         break;
     }
 
     console.log('[API] Starting search', { meal, amenities, opts, radiusMeters, lat: origin.lat, lon: origin.lon });
-    let listings = await overpassRestaurants(origin.lat, origin.lon, radiusMeters, amenities, opts);
+    let listings = await getRestaurantsFromDB(origin.lat, origin.lon, radiusMeters, amenities, opts);
     console.log('[API] Initial search returned', listings.length, 'results');
 
     if (listings.length === 0 && meal === 'coffee') {
       console.log('[API] Coffee: trying with fast_food added');
-      listings = await overpassRestaurants(origin.lat, origin.lon, radiusMeters, ['cafe', 'fast_food'], {});
+      listings = await getRestaurantsFromDB(origin.lat, origin.lon, radiusMeters, ['cafe', 'fast_food'], {});
       console.log('[API] Coffee with fast_food returned', listings.length, 'results');
     }
 
@@ -383,6 +288,11 @@ export const POST = async (req: NextRequest) => {
     });
 
     console.log('[API] After filtering:', filtered.length, 'places with names');
+    
+    // Sort by quality score (higher is better) to deprioritize potentially stale data
+    filtered.sort((a: any, b: any) => (b.qualityScore || 0) - (a.qualityScore || 0));
+    console.log('[API] Top quality scores:', filtered.slice(0, 5).map((r: any) => ({ name: r.name, score: r.qualityScore })));
+    
     const withDistance = filtered.map((r: any) => {
       const miles = haversineMiles(origin!.lat, origin!.lon, r.lat, r.lon);
       return {

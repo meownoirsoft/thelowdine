@@ -8,6 +8,7 @@ type ShareData = {
   mailSubject: string;
   mailBody: string;
   smsBody: string;
+  mapUrl?: string;
 };
 
 export default function Share({ share }: { share: ShareData }) {

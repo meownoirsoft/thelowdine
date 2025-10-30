@@ -83,10 +83,10 @@ export default function Home() {
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedRestaurant.address || `${selectedRestaurant.lat},${selectedRestaurant.lon}`)}`
       : `https://www.google.com/search?q=${name}`;
     const shareTextRaw = `LowDine picked: ${selectedRestaurant.name}${addressText}`;
-    const shareText = encodeURIComponent(shareTextRaw);
-    const mailSubject = encodeURIComponent('Dinner pick from LowDine');
-    const mailBody = encodeURIComponent(`${shareTextRaw}\n${mapUrl}`);
-    const smsBody = encodeURIComponent(`${shareTextRaw} ${mapUrl}`);
+    const shareText = shareTextRaw;
+    const mailSubject = 'Dinner pick from LowDine';
+    const mailBody = `${shareTextRaw}\n${mapUrl}`;
+    const smsBody = `${shareTextRaw} ${mapUrl}`;
     const url = process.env.NEXT_PUBLIC_SITE_URL || 'https://thelowdine.com';
     return { url, mapUrl, shareText, mailSubject, mailBody, smsBody };
   }, [selectedRestaurant]);

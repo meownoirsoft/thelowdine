@@ -259,15 +259,19 @@ export default function Home() {
 
   useEffect(() => {
     const q = location.trim();
-    if (!userEditedLocation) { // don't open from prefilled/localStorage
+    
+    // Skip if just selected from dropdown
+    if (justSelectedRef.current) return;
+    
+    // Only run autocomplete if user is actively typing (length >= 3)
+    if (q.length < 3) {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
     }
-    if (justSelectedRef.current) return; // suppress immediate reopen after click
-    if (q.length < 3) {
-      setSuggestions([]);
-      setShowSuggestions(false);
+    
+    // Don't show autocomplete unless user has edited
+    if (!userEditedLocation) {
       return;
     }
     
@@ -564,19 +568,13 @@ export default function Home() {
                       type="text"
                       value={location}
                       onChange={(e) => { 
-                        setLocation(e.target.value); 
+                        const newValue = e.target.value;
+                        setLocation(newValue); 
                         setUserEditedLocation(true);
-                        // Clear old suggestions when user types
-                        if (suggestions.length > 0 && e.target.value !== location) {
-                          setSuggestions([]);
-                          setShowSuggestions(false);
-                        }
                       }}
                       onFocus={(e) => {
                         // select all so new typing replaces previous entry
                         e.currentTarget.select();
-                        // Don't reopen old suggestions on focus
-                        setShowSuggestions(false);
                       }}
                       onMouseUp={(e) => {
                         // prevent clearing the programmatic selection on mouse up
@@ -732,7 +730,13 @@ export default function Home() {
                     Tony couldn't find anything nearby. Try again or widen the search radius.
                   </p>
                       <button 
-                        onClick={() => { setStep(1); setRestaurants([]); setWheelRestaurants([]); setCachedRestaurants([]); }}
+                        onClick={() => { 
+                          setStep(1); 
+                          setRestaurants([]); 
+                          setWheelRestaurants([]); 
+                          setCachedRestaurants([]); 
+                          setUserEditedLocation(true); // Allow typing on return
+                        }}
                         className="text-amber-200 underline"
                         style={{ fontFamily: 'var(--font-quote)' }}
                       >
@@ -808,7 +812,8 @@ export default function Home() {
                       style={{ fontFamily: 'var(--font-quote)' }} 
                       onClick={() => { 
                         try { trackEvent('back_to_start_clicked', { from: 'wheel_view' }); } catch {}
-                        setStep(1); 
+                        setStep(1);
+                        setUserEditedLocation(true); // Allow typing on return
                       }}
                     >
                       Back to Start
@@ -885,7 +890,8 @@ export default function Home() {
                   onClick={() => { 
                     try { trackEvent('back_to_start_clicked', { from: 'result_view' }); } catch {}
                     setShowResult(false); 
-                    setStep(1); 
+                    setStep(1);
+                    setUserEditedLocation(true); // Allow typing on return
                   }}
                 >
                   Back to Start

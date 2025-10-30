@@ -31,7 +31,7 @@ interface Suggestion {
   lon: number;
 }
 
-type Meal = 'dinner' | 'lunch' | 'snack' | 'coffee' | 'breakfast' | 'dessert' | 'drinks' | 'pizza' | 'vegan' | 'vegetarian';
+type Meal = 'dinner' | 'lunch' | 'snack' | 'coffee' | 'breakfast' | 'dessert' | 'drinks';
 
 export default function Home() {
 
@@ -74,22 +74,47 @@ export default function Home() {
   const DEBUG = true;
   const dlog = (...args: any[]) => { if (DEBUG) console.log('[LowDine]', ...args); };
 
-  const share = useMemo(() => {
-    if (!selectedRestaurant) return null;
-    const name = encodeURIComponent(selectedRestaurant.name);
-    const addressText = selectedRestaurant.address ? ` — ${selectedRestaurant.address}` : '';
-    // Map URL uses only address for more accurate results
-    const mapUrl = selectedRestaurant.lat && selectedRestaurant.lon
-      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedRestaurant.address || `${selectedRestaurant.lat},${selectedRestaurant.lon}`)}`
-      : `https://www.google.com/search?q=${name}`;
-    const shareTextRaw = `LowDine picked: ${selectedRestaurant.name}${addressText}`;
-    const shareText = shareTextRaw;
-    const mailSubject = 'Dinner pick from LowDine';
-    const mailBody = `${shareTextRaw}\n${mapUrl}`;
-    const smsBody = `${shareTextRaw} ${mapUrl}`;
-    const url = process.env.NEXT_PUBLIC_SITE_URL || 'https://thelowdine.com';
-    return { url, mapUrl, shareText, mailSubject, mailBody, smsBody };
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+
+  // Generate share link when restaurant is selected
+  useEffect(() => {
+    if (!selectedRestaurant) {
+      setShareUrl(null);
+      return;
+    }
+
+    const generateShareLink = async () => {
+      try {
+        const res = await fetch('/api/share', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ restaurant: selectedRestaurant }),
+        });
+        if (!res.ok) throw new Error('Failed to create share');
+        const data = await res.json();
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lowdine.com';
+        const url = `${siteUrl}/${data.shortId}`;
+        setShareUrl(url);
+        // Track share creation
+        trackEvent('share_created', { restaurant_id: selectedRestaurant.id, restaurant_name: selectedRestaurant.name });
+      } catch (e) {
+        console.error('Failed to create share:', e);
+      }
+    };
+
+    generateShareLink();
   }, [selectedRestaurant]);
+
+  const share = useMemo(() => {
+    if (!selectedRestaurant || !shareUrl) return null;
+    const addressText = selectedRestaurant.address ? ` — ${selectedRestaurant.address}` : '';
+    const shareTextRaw = `The Lowdine (eat out roulette) picked: ${selectedRestaurant.name}${addressText}`;
+    const shareText = shareTextRaw;
+    const mailSubject = 'The Lowdine (eat out roulette) dinner pick';
+    const mailBody = `${shareTextRaw}\n${shareUrl}`;
+    const smsBody = `${shareTextRaw} ${shareUrl}`;
+    return { url: shareUrl, mapUrl: shareUrl, shareText, mailSubject, mailBody, smsBody };
+  }, [selectedRestaurant, shareUrl]);
 
   const radiusSteps = [2500, 5000, 10000, 16093, 24140] as const;
   function radiusLabel(m: number) {
@@ -506,7 +531,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="w-[224px] sm:w-[256px] min-w-[224px] pr-2 sm:pr-2 -mt-4 -ml-4 mr-4">
-                  <p key={tonyLine} className="text-amber-200 italic text-2xl sm:text-3xl leading-snug text-left tracking-tight animate-fade-in" style={{ fontFamily: 'var(--font-quote)' }}>{tonyLine}</p>
+                  <p key={tonyLine} className="text-amber-200 italic text-lg sm:text-xl leading-snug text-left tracking-tight animate-fade-in" style={{ fontFamily: 'var(--font-quote)' }}>{tonyLine}</p>
                   <div className="mt-2 flex justify-start">
                     <div
                       className="w-full h-12 sm:h-14 flex items-center justify-center text-2xl sm:text-3xl font-bold tracking-normal text-slate-900 leading-tight text-center shadow"
@@ -576,9 +601,6 @@ export default function Home() {
                     <option value="breakfast">Breakfast</option>
                     <option value="dessert">Dessert</option>
                     <option value="drinks">Drinks</option>
-                    <option value="pizza">Pizza</option>
-                    <option value="vegan">Vegan</option>
-                    <option value="vegetarian">Veggie</option>
                   </select>
                   {showSuggestions && suggestions.length > 0 && (
                     <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 w-[min(20rem,90vw)] max-h-56 overflow-auto bg-slate-800 border border-slate-700 rounded-md shadow-lg z-20">
@@ -706,7 +728,7 @@ export default function Home() {
                       
                     </div>
                     <div className="w-[224px] sm:w-[256px] min-w-[224px] pr-2 sm:pr-2 -mt-4 -ml-4 mr-4">
-                      <p key={tonyLine} className="text-amber-200 italic text-2xl sm:text-3xl leading-snug text-left tracking-tight animate-fade-in" style={{ fontFamily: 'var(--font-quote)' }}>{tonyLine}</p>
+                      <p key={tonyLine} className="text-amber-200 italic text-lg sm:text-xl leading-snug text-left tracking-tight animate-fade-in" style={{ fontFamily: 'var(--font-quote)' }}>{tonyLine}</p>
                       <div className="mt-2 flex justify-start">
                         <div
                           className="w-full h-12 sm:h-14 flex items-center justify-center text-2xl sm:text-3xl font-bold tracking-normal text-slate-900 leading-tight text-center shadow"
@@ -757,7 +779,7 @@ export default function Home() {
                     {isSpinning ? 'Spinning...' : 'Spin the Wheel'}
                   </button>
                   <div>
-                    <button className="mt-2 text-amber-200 underline" style={{ fontFamily: 'var(--font-quote)' }} onClick={() => setStep(1)}>Back to Start</button>
+                    <button className="mt-2 text-amber-200 underline" style={{ fontFamily: 'var(--font-quote)' }} onClick={() => { try { trackEvent('back_to_start_clicked', { from: 'wheel_view' }); } catch {} setStep(1); }}>Back to Start</button>
                   </div>
                 </div>
               )}
@@ -774,7 +796,7 @@ export default function Home() {
                   
                 </div>
                 <div className="w-[224px] sm:w-[256px] min-w-[224px] pr-2 sm:pr-2 -mt-4 -ml-4 mr-4">
-                  <p key={tonyLine} className="text-amber-200 italic text-2xl sm:text-3xl leading-snug text-left tracking-tight animate-fade-in" style={{ fontFamily: 'var(--font-quote)' }}>{tonyLine}</p>
+                  <p key={tonyLine} className="text-amber-200 italic text-lg sm:text-xl leading-snug text-left tracking-tight animate-fade-in" style={{ fontFamily: 'var(--font-quote)' }}>{tonyLine}</p>
                   <div className="mt-2 flex justify-start">
                     <div
                       className="w-full h-12 sm:h-14 flex items-center justify-center text-2xl sm:text-3xl font-bold tracking-normal text-slate-900 leading-tight text-center shadow"
@@ -800,7 +822,7 @@ export default function Home() {
                 
                 <div className="mt-4 flex flex-row items-center gap-2">
                   <button
-                    onClick={spinAgain}
+                    onClick={() => { try { trackEvent('double_or_muffin_clicked'); } catch {} ; spinAgain(); }}
                     className="px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-lg flex items-center shadow ring-1 ring-amber-500/60"
                     style={{ fontFamily: 'var(--font-quote)' }}
                   >
@@ -811,7 +833,7 @@ export default function Home() {
                     target="_blank"
                     rel="noopener noreferrer"
                     href={share?.mapUrl}
-                    onClick={() => { try { trackEvent('map_clicked', { id: selectedRestaurant.id, name: selectedRestaurant.name }); } catch {} }}
+                    onClick={() => { try { trackEvent('result_map_clicked', { id: selectedRestaurant.id, name: selectedRestaurant.name }); } catch {} }}
                     className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg flex items-center"
                     style={{ fontFamily: 'var(--font-quote)' }}
                   >
@@ -821,11 +843,11 @@ export default function Home() {
                 </div>
               </div>
               <div className="mt-3 flex items-center justify-center">
-                <button className="text-amber-200 underline" style={{ fontFamily: 'var(--font-quote)' }} onClick={() => { setShowResult(false); setStep(1); }}>Back to Start</button>
+                <button className="text-amber-200 underline" style={{ fontFamily: 'var(--font-quote)' }} onClick={() => { try { trackEvent('back_to_start_clicked', { from: 'result_view' }); } catch {} setShowResult(false); setStep(1); }}>Back to Start</button>
               </div>
               <div className="mt-4 px-3 py-3 border-t border-amber-900/40">
                 <p className="text-center text-amber-300 text-sm mb-2" style={{ fontFamily: 'var(--font-quote)' }}>
-                  if anyone asks, you didn't hear it from me.
+                  If anyone asks, you didn't hear about this joint from me.
                 </p>
                 {share && (
                   <Share share={share} />

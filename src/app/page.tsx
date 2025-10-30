@@ -92,7 +92,7 @@ export default function Home() {
         });
         if (!res.ok) throw new Error('Failed to create share');
         const data = await res.json();
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lowdine.com';
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://thelowdine.com';
         const url = `${siteUrl}/${data.shortId}`;
         setShareUrl(url);
         // Track share creation

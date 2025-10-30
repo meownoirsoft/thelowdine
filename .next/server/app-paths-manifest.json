@@ -1,6 +1,5 @@
 {
   "/page": "app/page.js",
   "/[shortId]/page": "app/[shortId]/page.js",
-  "/api/share/route": "app/api/share/route.js",
   "/share/[id]/page": "app/share/[id]/page.js"
 }

@@ -271,9 +271,6 @@ export default function Home() {
       return;
     }
     
-    // Check if input is a 5-digit zip code
-    const isZipCode = /^\d{5}$/.test(q);
-    
     const ctrl = new AbortController();
     const t = setTimeout(async () => {
       try {
@@ -285,21 +282,9 @@ export default function Home() {
         const data = await res.json();
         const list: Suggestion[] = Array.isArray(data?.suggestions) ? data.suggestions : [];
         
-        // If it's a zip code and we got results, auto-select the first one
-        if (isZipCode && list.length > 0) {
-          const first = list[0];
-          setLocation(first.label);
-          const cp = { coords: { lat: first.lat, lon: first.lon } } as const;
-          setLastParams(cp);
-          setSuggestions([]);
-          setShowSuggestions(false);
-          setUserEditedLocation(false);
-          dlog('auto-selected zip code', { q, result: first.label });
-        } else {
-          setSuggestions(list);
-          setShowSuggestions(list.length > 0);
-          dlog('autocomplete results', { q, count: list.length });
-        }
+        setSuggestions(list);
+        setShowSuggestions(list.length > 0);
+        dlog('autocomplete results', { q, count: list.length });
         if (DEBUG) console.timeEnd(label);
       } catch {}
       finally {
@@ -310,7 +295,7 @@ export default function Home() {
       clearTimeout(t);
       ctrl.abort();
     };
-  }, [location]);
+  }, [location, userEditedLocation]);
 
   const handleLocationSubmit = async (e: FormEvent) => {
     e.preventDefault();

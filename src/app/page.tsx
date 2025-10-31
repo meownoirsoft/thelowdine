@@ -61,6 +61,7 @@ export default function Home() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [userEditedLocation, setUserEditedLocation] = useState(false);
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [thinkingCount, setThinkingCount] = useState(0);
   const [thinkingIdx, setThinkingIdx] = useState(0);
   const [showAbout, setShowAbout] = useState(false);
@@ -158,12 +159,8 @@ export default function Home() {
     } catch {}
   }, []);
 
-  // Persist location when the user types/changes it
-  useEffect(() => {
-    try {
-      localStorage.setItem('lowdine_location', location);
-    } catch {}
-  }, [location, userEditedLocation]);
+  // Note: Location is now only persisted when search is performed or suggestion selected
+  // This prevents localStorage conflicts during typing
 
   // Load persisted radius on mount
   useEffect(() => {
@@ -571,6 +568,11 @@ export default function Home() {
                         const newValue = e.target.value;
                         setLocation(newValue); 
                         setUserEditedLocation(true);
+                        setLocationConfirmed(false); // Unconfirm when typing
+                        // Clear lastParams so we don't use old coordinates
+                        if (newValue !== location) {
+                          setLastParams(null);
+                        }
                       }}
                       onFocus={(e) => {
                         // select all so new typing replaces previous entry
@@ -594,8 +596,10 @@ export default function Home() {
                         onClick={() => {
                           setLocation('');
                           setUserEditedLocation(true);
+                          setLocationConfirmed(false);
                           setSuggestions([]);
                           setShowSuggestions(false);
+                          setLastParams(null); // Clear old params
                         }}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-400 hover:text-amber-300 transition-colors"
                         aria-label="Clear location"
@@ -620,13 +624,17 @@ export default function Home() {
                               setLocation(s.label);
                               const cp = { coords: { lat: s.lat, lon: s.lon } } as const;
                               setLastParams(cp);
+                              setLocationConfirmed(true); // Confirm location on selection
                               setShowSuggestions(false);
                               setSuggestions([]);
                               setUserEditedLocation(false);
                               setAutocompleteLoading(false);
                               justSelectedRef.current = true;
                               setTimeout(() => { justSelectedRef.current = false; }, 400);
-
+                              // Save to localStorage on confirmed selection
+                              try {
+                                localStorage.setItem('lowdine_location', s.label);
+                              } catch {}
                             }}
                           >
                             {s.label}
@@ -679,18 +687,29 @@ export default function Home() {
                 </div>
               </div>
               <div className="mt-6 flex justify-center">
-                {hasLocation && hasMeal && !loading && (
+                {hasLocation && hasMeal && !loading && locationConfirmed && (
                   <button
                     onClick={async () => {
                       const q = location.trim();
                       if (!q || !meal) return;
+                      
+                      // Always create fresh query params from current input
                       const qp = { queryText: q } as const;
                       setLastParams(qp);
                       setSearchTriggered(true);
-                      // Clear cache to ensure fresh results for new location
+                      
+                      // IMPORTANT: Clear all cached data to force fresh search
                       setCachedRestaurants([]);
                       setRestaurants([]);
                       setWheelRestaurants([]);
+                      setSelectedRestaurant(null);
+                      setShowResult(false);
+                      
+                      // Save location to localStorage on search
+                      try {
+                        localStorage.setItem('lowdine_location', q);
+                      } catch {}
+                      
                       try { trackEvent('search_clicked', { location: q, meal, exclude_fast_food: excludeFastFood, radius_m: radiusMeters }); } catch {}
 
                       await fetchRestaurants({ ...qp, radius: radiusMeters, meal });
@@ -753,6 +772,7 @@ export default function Home() {
                           setWheelRestaurants([]); 
                           setCachedRestaurants([]); 
                           setUserEditedLocation(true); // Allow typing on return
+                          setLocationConfirmed(false); // Require reconfirmation
                         }}
                         className="text-amber-200 underline"
                         style={{ fontFamily: 'var(--font-quote)' }}
@@ -831,6 +851,7 @@ export default function Home() {
                         try { trackEvent('back_to_start_clicked', { from: 'wheel_view' }); } catch {}
                         setStep(1);
                         setUserEditedLocation(true); // Allow typing on return
+                        setLocationConfirmed(false); // Require reconfirmation
                       }}
                     >
                       Back to Start
@@ -909,6 +930,7 @@ export default function Home() {
                     setShowResult(false); 
                     setStep(1);
                     setUserEditedLocation(true); // Allow typing on return
+                    setLocationConfirmed(false); // Require reconfirmation
                   }}
                 >
                   Back to Start

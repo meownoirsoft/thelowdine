@@ -1,6 +1,7 @@
 {
+  "/not-found": "app/not-found.js",
   "/page": "app/page.js",
-  "/api/autocomplete/route": "app/api/autocomplete/route.js",
   "/api/share/route": "app/api/share/route.js",
+  "/api/autocomplete/route": "app/api/autocomplete/route.js",
   "/api/restaurants/route": "app/api/restaurants/route.js"
 }

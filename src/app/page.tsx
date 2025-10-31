@@ -148,13 +148,20 @@ export default function Home() {
     } catch {}
   }, [cachedRestaurants]);
 
-  // Load persisted location on mount
+  // Load persisted location and coordinates on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem('lowdine_location');
+      const savedCoords = localStorage.getItem('lowdine_location_coords');
       if (saved) {
         setLocation(saved);
         setUserEditedLocation(false);
+      }
+      if (savedCoords) {
+        try {
+          const coords = JSON.parse(savedCoords);
+          setLastParams({ coords });
+        } catch {}
       }
     } catch {}
   }, []);
@@ -243,16 +250,6 @@ export default function Home() {
     // Intentionally skip auto-fetch here to keep user in control; they can click again if desired
   }, [radiusMeters, meal, cachedRestaurants.length, searchTriggered, lastParams, meal]);
 
-  // Debounce location typing: in manual mode we only update lastParams, do not auto-fetch
-  useEffect(() => {
-    const q = location.trim();
-    if (!q) return;
-    const t = setTimeout(() => {
-      setLastParams({ queryText: q } as const);
-    }, 300);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location]);
 
   useEffect(() => {
     const q = location.trim();
@@ -568,11 +565,8 @@ export default function Home() {
                         const newValue = e.target.value;
                         setLocation(newValue); 
                         setUserEditedLocation(true);
-                        setLocationConfirmed(false); // Unconfirm when typing
-                        // Clear lastParams so we don't use old coordinates
-                        if (newValue !== location) {
-                          setLastParams(null);
-                        }
+                        // Only clear lastParams if we're changing the location text after selection
+                        // Not if we just cleared it via the X button
                       }}
                       onFocus={(e) => {
                         // select all so new typing replaces previous entry
@@ -634,6 +628,7 @@ export default function Home() {
                               // Save to localStorage on confirmed selection
                               try {
                                 localStorage.setItem('lowdine_location', s.label);
+                                localStorage.setItem('lowdine_location_coords', JSON.stringify({ lat: s.lat, lon: s.lon }));
                               } catch {}
                             }}
                           >
@@ -686,16 +681,24 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+              {error && (
+                <div className="mb-4 p-3 bg-red-900/30 border border-red-500 rounded text-red-300 text-sm text-center">
+                  {error}
+                </div>
+              )}
               <div className="mt-6 flex justify-center">
-                {hasLocation && hasMeal && !loading && locationConfirmed && (
+                {hasLocation && hasMeal && !loading && lastParams?.coords && (
                   <button
                     onClick={async () => {
                       const q = location.trim();
                       if (!q || !meal) return;
                       
-                      // Always create fresh query params from current input
-                      const qp = { queryText: q } as const;
-                      setLastParams(qp);
+                      // Must have coords from autocomplete selection (no more Nominatim geocoding)
+                      if (!lastParams?.coords) {
+                        setError('Please select a location from the suggestions.');
+                        return;
+                      }
+                      
                       setSearchTriggered(true);
                       
                       // IMPORTANT: Clear all cached data to force fresh search
@@ -708,11 +711,14 @@ export default function Home() {
                       // Save location to localStorage on search
                       try {
                         localStorage.setItem('lowdine_location', q);
+                        if (lastParams?.coords) {
+                          localStorage.setItem('lowdine_location_coords', JSON.stringify(lastParams.coords));
+                        }
                       } catch {}
                       
                       try { trackEvent('search_clicked', { location: q, meal, exclude_fast_food: excludeFastFood, radius_m: radiusMeters }); } catch {}
 
-                      await fetchRestaurants({ ...qp, radius: radiusMeters, meal });
+                      await fetchRestaurants({ coords: lastParams.coords!, radius: radiusMeters, meal });
                       setStep(2);
                     }}
                     className={`px-6 py-3 rounded text-lg font-semibold transition-colors bg-amber-600 hover:bg-amber-700`}

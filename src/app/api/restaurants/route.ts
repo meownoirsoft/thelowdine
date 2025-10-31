@@ -69,33 +69,6 @@ function haversineMiles(lat1: number, lon1: number, lat2: number, lon2: number) 
   return R * c;
 }
 
-async function geocode(text: string) {
-  const url = new URL('https://nominatim.openstreetmap.org/search');
-  url.searchParams.set('q', text);
-  url.searchParams.set('format', 'json');
-  url.searchParams.set('limit', '1');
-
-  const controller = new AbortController();
-  const to = setTimeout(() => controller.abort(), 10000);
-  try {
-    const res = await fetch(url.toString(), {
-      headers: {
-        'User-Agent': 'Lowdine/1.0 (contact: example@example.com)'
-      },
-      cache: 'no-store',
-      signal: controller.signal,
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) return null;
-    const item = data[0];
-    return { lat: parseFloat(item.lat), lon: parseFloat(item.lon), display_name: item.display_name as string };
-  } catch (e) {
-    return null;
-  } finally {
-    clearTimeout(to);
-  }
-}
 
 async function getRestaurantsFromDB(
   lat: number,
@@ -125,26 +98,36 @@ async function getRestaurantsFromDB(
       'lon BETWEEN $3 AND $4'
     ];
 
-    // Filter by type (amenity)
+    // Filter by amenity and/or cuisine/name patterns
+    const amenityConditions: string[] = [];
+    
+    // Amenity filter (OR with other include filters)
     if (amenities.length > 0) {
       queryParams.push(amenities);
-      whereConditions.push(`type = ANY($${queryParams.length})`);
+      amenityConditions.push(`type = ANY($${queryParams.length})`);
     }
-
-    // Filter by cuisine (if provided)
+    
+    // Include cuisine regex
     if (opts?.includeCuisineRegex) {
       queryParams.push(opts.includeCuisineRegex);
-      whereConditions.push(`type ~* $${queryParams.length}`);
+      amenityConditions.push(`type ~* $${queryParams.length}`);
     }
+    
+    // Include name regex
+    if (opts?.includeNameRegex) {
+      queryParams.push(opts.includeNameRegex);
+      amenityConditions.push(`name ~* $${queryParams.length}`);
+    }
+    
+    // Combine amenity/cuisine/name with OR if we have multiple conditions
+    if (amenityConditions.length > 0) {
+      whereConditions.push(`(${amenityConditions.join(' OR ')})`);
+    }
+    
+    // Exclude filters (always AND)
     if (opts?.excludeCuisineRegex) {
       queryParams.push(opts.excludeCuisineRegex);
       whereConditions.push(`type !~* $${queryParams.length}`);
-    }
-
-    // Filter by name (if provided)
-    if (opts?.includeNameRegex) {
-      queryParams.push(opts.includeNameRegex);
-      whereConditions.push(`name ~* $${queryParams.length}`);
     }
     if (opts?.excludeNameRegex) {
       queryParams.push(opts.excludeNameRegex);
@@ -196,18 +179,14 @@ async function getRestaurantsFromDB(
 export const POST = async (req: NextRequest) => {
   try {
     const body = await req.json();
-    const { queryText, coords, radiusMeters = 2000, meal = 'dinner' } = body || {};
+    const { coords, radiusMeters = 2000, meal = 'dinner' } = body || {};
 
     let origin: { lat: number; lon: number; label?: string } | null = null;
 
     if (coords && typeof coords.lat === 'number' && typeof coords.lon === 'number') {
       origin = { lat: coords.lat, lon: coords.lon };
-    } else if (typeof queryText === 'string' && queryText.trim().length > 0) {
-      const g = await geocode(queryText.trim());
-      if (!g) return NextResponse.json({ error: 'Location not found' }, { status: 404 });
-      origin = { lat: g.lat, lon: g.lon, label: g.display_name };
     } else {
-      return NextResponse.json({ error: 'Missing location' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing coordinates' }, { status: 400 });
     }
 
     let amenities: string[] = ['restaurant', 'fast_food', 'pub'];

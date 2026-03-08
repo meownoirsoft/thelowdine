@@ -1,45 +1,111 @@
-# Lowdine - The Speakeasy Dinner Decider
+# Lowdine — The Speakeasy Dinner Decider
 
-A mobile-first web app that helps indecisive diners choose where to eat using a fun roulette wheel interface.
+Lowdine is a mobile-first web application designed to solve one of the most common social dilemmas: deciding where to eat.
 
-## Features
+Instead of scrolling endlessly through restaurant lists, users spin a roulette-style wheel that randomly selects a restaurant. The experience is designed to make decision-making fast, playful, and social.
 
-- 🍽️ Find local restaurants based on your location
-- 🎡 Spin the wheel to randomly select a restaurant
-- 🎲 "Double or Muffin" option to spin again
-- 📱 Mobile-first responsive design
-- 🎨 Speakeasy-themed UI with smooth animations
+The interface uses a speakeasy-inspired theme and animated wheel interactions to turn restaurant selection into a small moment of entertainment.
 
-## Getting Started
+---
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+## Why This Exists
 
-## Tech Stack
+Choosing where to eat is a surprisingly common source of friction.
 
-- Next.js 13+ (App Router)
+Typical experiences involve:
+
+- endless scrolling through restaurant apps
+- decision fatigue between multiple options
+- group indecision when dining with others
+
+Lowdine reframes the problem as a game: spin the wheel and let randomness decide.
+
+---
+
+## Core Idea
+
+Lowdine acts as a **decision engine for nearby restaurants**.
+
+Users provide their location, the system gathers nearby dining options, and a roulette wheel selects a destination.
+
+```
+User location
+↓
+Restaurant discovery
+↓
+Candidate restaurant list
+↓
+Roulette wheel selection
+↓
+Selected restaurant
+```
+
+
+---
+
+## Key Features
+
+### Restaurant Discovery
+Find nearby restaurants based on the user's location.
+
+### Roulette Selection
+Restaurants are placed on a wheel and randomly selected using a spinning animation.
+
+### "Double or Muffin"
+A playful option that allows users to spin again and try their luck.
+
+### Mobile-First Design
+The interface is optimized for quick interactions on mobile devices.
+
+### Animated UI
+Smooth animations using Framer Motion enhance the wheel interaction.
+
+---
+
+## Screenshot
+
+*(Add a screenshot here once available)*
+
+
+---
+
+## Technology Stack
+
+### Frontend
+- Next.js (App Router)
 - TypeScript
+
+### UI
 - Tailwind CSS
 - Framer Motion
 - React Icons
-- Leaflet (for future map integration)
 
-## Future Enhancements
+### Mapping (planned)
+- Leaflet
+- OpenStreetMap / Overpass API
 
-- [ ] Integrate with OpenStreetMap Overpass API for real restaurant data
-- [ ] Add user authentication to save favorite restaurants
-- [ ] Implement filters for cuisine type, price range, etc.
-- [ ] Add directions to selected restaurant
-- [ ] Dark/light mode toggle
+---
 
-## License
+## Development Setup
 
+Install dependencies:
+
+```bash
+npm install
+```
+
+# Future Enhancements
+
+- Restaurant discovery via OpenStreetMap Overpass API
+- Cuisine and price filtering
+- Saved restaurant lists
+- Navigation integration
+- Group decision mode
+
+# Project Status
+Active prototype.
+
+The project explores playful UI patterns for reducing decision fatigue in everyday choices.
+
+# License
 MIT
